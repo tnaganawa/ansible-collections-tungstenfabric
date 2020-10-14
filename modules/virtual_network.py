@@ -104,7 +104,7 @@ def run_module():
 
     ## check if the fqname exists
     response = json.loads(requests.post(config_api_url + 'fqname-to-id').content.decode('UTF-8'), headers=vnc_api_headers)
-    if response.code == 200:
+    if response.status_code == 200:
       update = True
       uuid = json.loads(response.text).get("uuid")
     else:
@@ -120,18 +120,18 @@ def run_module():
     if state == "present":
       if update:
         js["uuid"]=uuid
-        response = json.loads(requests.post(web_api_url + 'api/tenants/config/create-config-object').content.decode('UTF-8'), data=json.dumps(js), headers=vnc_api_headers)
+        response = json.loads(requests.post(web_api_url + 'api/tenants/config/create-config-object').content.decode('UTF-8'), data=json.dumps(js), headers=vnc_api_headers, verify=False)
       else:
-        response = json.loads(requests.post(web_api_url + 'api/tenants/config/update-config-object').content.decode('UTF-8'), data=json.dumps(js), headers=vnc_api_headers)
+        response = json.loads(requests.post(web_api_url + 'api/tenants/config/update-config-object').content.decode('UTF-8'), data=json.dumps(js), headers=vnc_api_headers, verify=False)
       message = response.text
     elif state == "absent":
       if update:
         js["uuid"]=uuid
-        response = json.loads(requests.post(web_api_url + 'api/tenants/config/delete').content.decode('UTF-8'), data=json.dumps([{"type": "virtual-network", "deleteIDs": ["{}".format(uuid)]}]), headers=vnc_api_headers)
+        response = json.loads(requests.post(web_api_url + 'api/tenants/config/delete').content.decode('UTF-8'), data=json.dumps([{"type": "virtual-network", "deleteIDs": ["{}".format(uuid)]}]), headers=vnc_api_headers, verify=False)
       else:
         pass
 
-    if response.code == 200:
+    if response.status_code == 200:
       result['changed'] = True
     elif:
       result['changed'] = False
