@@ -77,12 +77,11 @@ def run_module():
     module_args = dict(
         name=dict(type='str', required=True),
         controller_ip=dict(type='str', required=True),
-        subnet=dict(type='str', required=False, default=False)
-        domain=dict(type='str', required=False, default='default-domain')
-        project=dict(type='str', required=False, default='default-project')
+        subnet=dict(type='str', required=False, default=False),
+        domain=dict(type='str', required=False, default='default-domain'),
+        project=dict(type='str', required=False, default='default-project'),
         state=dict(type='str', required=False, default='present', choices=['absent', 'present'])
     )
-
     result = dict(
         changed=False,
         message=''
@@ -92,6 +91,14 @@ def run_module():
         argument_spec=module_args,
         supports_check_mode=True
     )
+
+    name = module.params.get("name")
+    controller_ip = module.params.get("controller_ip")
+    subnet = module.params.get("subnet")
+    domain = module.params.get("domain")
+    project = module.params.get("project")
+    state = module.params.get("state")
+
 
     if module.check_mode:
         module.exit_json(**result)
@@ -103,7 +110,7 @@ def run_module():
     failed = False
 
     ## check if the fqname exists
-    response = json.loads(requests.post(config_api_url + 'fqname-to-id').content.decode('UTF-8'), headers=vnc_api_headers)
+    response = requests.post(config_api_url + 'fqname-to-id', headers=vnc_api_headers)
     if response.status_code == 200:
       update = True
       uuid = json.loads(response.text).get("uuid")
@@ -112,28 +119,28 @@ def run_module():
 
 
     js=json.loads (
-    """{"fq_name": ["%s", "%s", "%s"]
+    '''{"fq_name": ["%s", "%s", "%s"],
     "parent_type": "project"
-    """ % (domain, project, name)
     }
+    ''' % (domain, project, name)
     )
     if state == "present":
       if update:
         js["uuid"]=uuid
-        response = json.loads(requests.post(web_api_url + 'api/tenants/config/create-config-object').content.decode('UTF-8'), data=json.dumps(js), headers=vnc_api_headers, verify=False)
+        response = requests.post(web_api_url + 'api/tenants/config/create-config-object', data=json.dumps(js), headers=vnc_api_headers, verify=False)
       else:
-        response = json.loads(requests.post(web_api_url + 'api/tenants/config/update-config-object').content.decode('UTF-8'), data=json.dumps(js), headers=vnc_api_headers, verify=False)
+        response = requests.post(web_api_url + 'api/tenants/config/update-config-object', data=json.dumps(js), headers=vnc_api_headers, verify=False)
       message = response.text
-    elif state == "absent":
+    elif (state == "absent"):
       if update:
         js["uuid"]=uuid
-        response = json.loads(requests.post(web_api_url + 'api/tenants/config/delete').content.decode('UTF-8'), data=json.dumps([{"type": "virtual-network", "deleteIDs": ["{}".format(uuid)]}]), headers=vnc_api_headers, verify=False)
+        response = requests.post(web_api_url + 'api/tenants/config/delete', data=json.dumps([{"type": "virtual-network", "deleteIDs": ["{}".format(uuid)]}]), headers=vnc_api_headers, verify=False)
       else:
         pass
 
     if response.status_code == 200:
       result['changed'] = True
-    elif:
+    else:
       result['changed'] = False
       failed = True
 
