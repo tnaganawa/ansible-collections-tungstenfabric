@@ -33,6 +33,10 @@ options:
         description:
             - virtual-network subnet
         required: false
+    subnet_prefix:
+        description:
+            - virtual-network subnet prefix
+        required: false
     domain:
         description:
             - virtual-network subnet
@@ -43,7 +47,7 @@ options:
         required: false
 
 author:
-    - Tatsuya Naganawa (@yourhandle)
+    - Tatsuya Naganawa (@tnaganawa)
 '''
 
 EXAMPLES = '''
@@ -77,10 +81,13 @@ def run_module():
     module_args = dict(
         name=dict(type='str', required=True),
         controller_ip=dict(type='str', required=True),
-        subnet=dict(type='str', required=False, default=False),
+        username=dict(type='str', required=False, default='admin'),
+        password=dict(type='str', required=False, default='contrail123'),
+        state=dict(type='str', required=False, default='present', choices=['absent', 'present']),
         domain=dict(type='str', required=False, default='default-domain'),
         project=dict(type='str', required=False, default='default-project'),
-        state=dict(type='str', required=False, default='present', choices=['absent', 'present'])
+        subnet=dict(type='str', required=False),
+        subnet_prefix=dict(type='int', required=False)
     )
     result = dict(
         changed=False,
@@ -94,10 +101,13 @@ def run_module():
 
     name = module.params.get("name")
     controller_ip = module.params.get("controller_ip")
-    subnet = module.params.get("subnet")
+    username = module.params.get("username")
+    password = module.params.get("password")
+    state = module.params.get("state")
     domain = module.params.get("domain")
     project = module.params.get("project")
-    state = module.params.get("state")
+    subnet = module.params.get("subnet")
+    subnet_prefix = module.params.get("subnet_prefix")
 
 
     if module.check_mode:
@@ -110,33 +120,55 @@ def run_module():
     failed = False
 
     ## check if the fqname exists
-    response = requests.post(config_api_url + 'fqname-to-id', headers=vnc_api_headers)
+    response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "virtual_network", "fq_name": ["%s", "%s", "%s"]}' % (domain, project, name), headers=vnc_api_headers)
     if response.status_code == 200:
       update = True
       uuid = json.loads(response.text).get("uuid")
     else:
       update = False
 
+    ## login to web API
+    client = requests.session()
+    response = client.post(web_api_url + 'authenticate', data=json.dumps({"username": username, "password": password}), headers=vnc_api_headers, verify=False)
+    print (client.cookies)
+    csrftoken=client.cookies['_csrf']
+    vnc_api_headers["x-csrf-token"]=csrftoken
 
+    ## create payload and call API
     js=json.loads (
-    '''{"fq_name": ["%s", "%s", "%s"],
-    "parent_type": "project"
+    '''
+    { "virtual-network":
+      {
+        "fq_name": ["%s", "%s", "%s"],
+        "parent_type": "project"
+      }
     }
     ''' % (domain, project, name)
     )
+
+    if subnet:
+      js ["virtual-network"]["network_ipam_refs"]=[
+        {"to": ["default-domain", "default-project", "default-network-ipam"],
+        "attr": {"ipam_subnets": [{"subnet": {"ip_prefix": subnet, "ip_prefix_len": subnet_prefix}}]}
+        }
+      ]
+
+
     if state == "present":
       if update:
-        js["uuid"]=uuid
-        response = requests.post(web_api_url + 'api/tenants/config/create-config-object', data=json.dumps(js), headers=vnc_api_headers, verify=False)
+        print ("update object")
+        js["virtual-network"]["uuid"]=uuid
+        response = client.post(web_api_url + 'api/tenants/config/update-config-object', data=json.dumps(js), headers=vnc_api_headers, verify=False)
       else:
-        response = requests.post(web_api_url + 'api/tenants/config/update-config-object', data=json.dumps(js), headers=vnc_api_headers, verify=False)
-      message = response.text
+        print ("create object")
+        response = client.post(web_api_url + 'api/tenants/config/create-config-object', data=json.dumps(js), headers=vnc_api_headers, verify=False)
     elif (state == "absent"):
       if update:
-        js["uuid"]=uuid
-        response = requests.post(web_api_url + 'api/tenants/config/delete', data=json.dumps([{"type": "virtual-network", "deleteIDs": ["{}".format(uuid)]}]), headers=vnc_api_headers, verify=False)
+        print ("delete object {}".format(uuid))
+        response = client.post(web_api_url + 'api/tenants/config/delete', data=json.dumps([{"type": "virtual-network", "deleteIDs": ["{}".format(uuid)]}]), headers=vnc_api_headers, verify=False)
       else:
-        pass
+        failed = True
+    message = response.text
 
     if response.status_code == 200:
       result['changed'] = True
