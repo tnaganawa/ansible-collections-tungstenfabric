@@ -11,39 +11,31 @@ ANSIBLE_METADATA = {
 
 DOCUMENTATION = '''
 ---
-module: virtual_network
+module: logical_router
 
-short_description: create tungstenfabirc virtual-network
+short_description: create tungstenfabirc logical-router
 
 version_added: "2.10"
 
 description:
-    - "create / delete tungstenfabric virtual-network"
+    - "create / delete tungstenfabric logical-router"
 
 options:
     name:
         description:
-            - virtual-network name
+            - logical-router name
         required: true
     controller_ip:
         description:
             - tungstenfabric controller ip
         required: true
-    subnet:
-        description:
-            - virtual-network subnet
-        required: false
-    subnet_prefix:
-        description:
-            - virtual-network subnet prefix
-        required: false
     domain:
         description:
-            - virtual-network subnet
+            - logical-router subnet
         required: false
     project:
         description:
-            - virtual-network subnet
+            - logical-router subnet
         required: false
 
 author:
@@ -52,15 +44,15 @@ author:
 
 EXAMPLES = '''
 # Pass in a message
-- name: create virtual-network
-  tungstenfabric_virtual_network:
-    name: vn1
+- name: create logical-router
+  tungstenfabric_logical_router:
+    name: lr1
     controller_ip: x.x.x.x
     state: present
 
-- name: delete virtual-network
-  tungstenfabric_virtual_network:
-    name: vn1
+- name: delete logical-router
+  tungstenfabric_logical_router:
+    name: lr1
     controller_ip: x.x.x.x
     state: absent
 
@@ -87,20 +79,8 @@ def run_module():
         uuid=dict(type='str', required=False),
         domain=dict(type='str', required=False, default='default-domain'),
         project=dict(type='str', required=False, default='default-project'),
-        subnet=dict(type='str', required=False),
-        subnet_prefix=dict(type='int', required=False),
-        flood_unknown_unicast=dict(type='bool', required=False),
-        ip_fabric_forwarding=dict(type='bool', required=False),
-        fabric_snat=dict(type='bool', required=False),
-        display_name=dict(type='str', required=False),
-        igmp_enable=dict(type='bool', required=False),
-        mac_learning_enabled=dict(type='bool', required=False),
-        port_security_enabled=dict(type='bool', required=False),
-        allow_transit=dict(type='bool', required=False),
-        forwarding_mode=dict(type='str', required=False, choices=['default', 'l2_l3', 'l3', 'l2']),
-        max_flows=dict(type='int', required=False),
-        rpf=dict(type='bool', required=False),
-        vxlan_network_identifier=dict(type='int', required=False)
+        router_type=dict(type='str', required=False, choices=['snat-routing', 'vxlan-routing'])
+        connected_networks=dict(type='list', required=False)
     )
     result = dict(
         changed=False,
@@ -119,20 +99,20 @@ def run_module():
     state = module.params.get("state")
     domain = module.params.get("domain")
     project = module.params.get("project")
-    subnet = module.params.get("subnet")
-    subnet_prefix = module.params.get("subnet_prefix")
+    router_type = module.params.get("router_type")
+    connected_networks = module.params.get("connected_networks")
 
     if module.check_mode:
         module.exit_json(**result)
 
-    ## begin: virtual-network
+    ## begin: logical-router
     config_api_url = 'http://' + controller_ip + ':8082/'
     web_api_url = 'https://' + controller_ip + ':8143/'
     vnc_api_headers= {"Content-Type": "application/json", "charset": "UTF-8"}
     failed = False
 
     ## check if the fqname exists
-    response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "virtual_network", "fq_name": ["%s", "%s", "%s"]}' % (domain, project, name), headers=vnc_api_headers)
+    response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "logical_router", "fq_name": ["%s", "%s", "%s"]}' % (domain, project, name), headers=vnc_api_headers)
     if response.status_code == 200:
       update = True
       uuid = json.loads(response.text).get("uuid")
@@ -149,7 +129,7 @@ def run_module():
     ## create payload and call API
     js=json.loads (
     '''
-    { "virtual-network":
+    { "logical-router":
       {
         "fq_name": ["%s", "%s", "%s"],
         "parent_type": "project"
@@ -158,18 +138,18 @@ def run_module():
     ''' % (domain, project, name)
     )
 
-    if subnet:
-      js ["virtual-network"]["network_ipam_refs"]=[
-        {"to": ["default-domain", "default-project", "default-network-ipam"],
-        "attr": {"ipam_subnets": [{"subnet": {"ip_prefix": subnet, "ip_prefix_len": subnet_prefix}}]}
-        }
-      ]
+    #if subnet:
+    #  js ["logical-router"]["network_ipam_refs"]=[
+    #    {"to": ["default-domain", "default-project", "default-network-ipam"],
+    #    "attr": {"ipam_subnets": [{"subnet": {"ip_prefix": subnet, "ip_prefix_len": subnet_prefix}}]}
+    #    }
+    #  ]
 
 
     if state == "present":
       if update:
         print ("update object")
-        js["virtual-network"]["uuid"]=uuid
+        js["logical-router"]["uuid"]=uuid
         response = client.post(web_api_url + 'api/tenants/config/update-config-object', data=json.dumps(js), headers=vnc_api_headers, verify=False)
       else:
         print ("create object")
@@ -177,7 +157,7 @@ def run_module():
     elif (state == "absent"):
       if update:
         print ("delete object {}".format(uuid))
-        response = client.post(web_api_url + 'api/tenants/config/delete', data=json.dumps([{"type": "virtual-network", "deleteIDs": ["{}".format(uuid)]}]), headers=vnc_api_headers, verify=False)
+        response = client.post(web_api_url + 'api/tenants/config/delete', data=json.dumps([{"type": "logical-router", "deleteIDs": ["{}".format(uuid)]}]), headers=vnc_api_headers, verify=False)
       else:
         failed = True
     message = response.text
@@ -190,7 +170,7 @@ def run_module():
 
     result['message'] = message
 
-    ## end: virtual-network
+    ## end: logical-router
 
     if failed:
         module.fail_json(msg='failure message', **result)
