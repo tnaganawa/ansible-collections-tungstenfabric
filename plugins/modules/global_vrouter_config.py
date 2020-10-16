@@ -21,10 +21,6 @@ description:
     - "create / delete tungstenfabric global-vrouter-config"
 
 options:
-    name:
-        description:
-            - global-vrouter-config name
-        required: true
     controller_ip:
         description:
             - tungstenfabric controller ip
@@ -42,7 +38,6 @@ EXAMPLES = '''
 # Pass in a message
 - name: update global-vrouter-config
   tungstenfabric.global_vrouter_config.global_vrouter_config:
-    name: global-vrouter-config1
     controller_ip: x.x.x.x
     state: present
 '''
@@ -63,11 +58,10 @@ from ansible_collections.tungstenfabric.networking.plugins.module_utils.common i
 
 def run_module():
     module_args = dict(
-        name=dict(type='str', required=True),
         controller_ip=dict(type='str', required=True),
         username=dict(type='str', required=False, default='admin'),
         password=dict(type='str', required=False, default='contrail123'),
-        state=dict(type='str', required=False, default='present', choices=['absent', 'present']),
+        state=dict(type='str', required=False, default='present', choices=['present']),
         uuid=dict(type='str', required=False),
         flow_export_rate=dict(type='int', required=False),
     )
@@ -81,7 +75,7 @@ def run_module():
         supports_check_mode=True
     )
 
-    name = module.params.get("name")
+    name='default-global-vrouter-config'
     controller_ip = module.params.get("controller_ip")
     username = module.params.get("username")
     password = module.params.get("password")
@@ -95,28 +89,10 @@ def run_module():
 
     (web_api, update, uuid, js) = login_and_check_id(name, obj_type, controller_ip, username, password, state)
 
-
-    if update and state=='present':
-      pass
-    else:
-      ## create payload and call API
-      js=json.loads (
-      '''
-      { "global-vrouter-config":
-        {
-          "fq_name": ["global-default-system-config", "global-default-vrouter-config"],
-          "parent_type": "global-system-config"
-        }
-      }
-      '''
-    )
-
-    ## begin: object specific
     if flow_export_rate:
-      js ["flow_export_rate"]=flow_export_rate
+      js ["global-vrouter-config"]["flow_export_rate"]=flow_export_rate
 
     ## end: object specific
-
 
     payload=json.dumps(js)
 

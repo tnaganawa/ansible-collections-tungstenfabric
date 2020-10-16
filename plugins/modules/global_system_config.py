@@ -21,10 +21,6 @@ description:
     - "create / delete tungstenfabric global-system-config"
 
 options:
-    name:
-        description:
-            - global-system-config name
-        required: true
     controller_ip:
         description:
             - tungstenfabric controller ip
@@ -63,11 +59,10 @@ from ansible_collections.tungstenfabric.networking.plugins.module_utils.common i
 
 def run_module():
     module_args = dict(
-        name=dict(type='str', required=True),
         controller_ip=dict(type='str', required=True),
         username=dict(type='str', required=False, default='admin'),
         password=dict(type='str', required=False, default='contrail123'),
-        state=dict(type='str', required=False, default='present', choices=['absent', 'present']),
+        state=dict(type='str', required=False, default='present', choices=['present']),
         uuid=dict(type='str', required=False),
         autonomous_system=dict(type='int', required=False),
     )
@@ -81,7 +76,7 @@ def run_module():
         supports_check_mode=True
     )
 
-    name = module.params.get("name")
+    name='global-default-system-config'
     controller_ip = module.params.get("controller_ip")
     username = module.params.get("username")
     password = module.params.get("password")
@@ -95,29 +90,25 @@ def run_module():
 
     (web_api, update, uuid, js) = login_and_check_id(name, obj_type, controller_ip, username, password, state)
 
-
-    if update and state=='present':
-      pass
-    else:
-      ## create payload and call API
-      js=json.loads (
-      '''
-      { "global-system-config":
-        {
-          "fq_name": ["global-default-system-config"]
-        }
-      }
-      '''
-    )
-
     ## begin: object specific
-    if flow_export_rate:
-      js ["flow_export_rate"]=flow_export_rate
+    old_js = js
+    js = {"global-system-config": {}}
 
+    ## limit properties because of web api limitation
+    for k in old_js["global-system-config"]:
+      if k in ["bgpaas_parameters", "igmp_enable", "parent_type", "ibgp_auto_mesh", "rd_cluster_seed", "autonomous_system", "enable_4byte_as", "display_name", "plugin_tuning", "tag_refs", "id_perms:enable", "id_perms:description", "id_perms:user_visible", "id_perms:permissions", "fast_convergence_parameters", "ip_fabric_subnets", "annotations", "mac_limit_control", "user_defined_log_statistics", "config_version", "supported_vendor_hardwares", "enable_security_policy_draft", "perms2", "bgp_router_refs", "supported_fabric_annotations", "alarm_enable", "mac_move_control", "data_center_interconnect_loopback_namespace", "bgp_always_compare_med", "data_center_interconnect_asn_namespace", "graceful_restart_parameters", "supported_device_families", "mac_aging_time", "fq_name", "uuid", "display_name", "parent_type", "parent_uuid"]:
+        js["global-system-config"][k]=old_js["global-system-config"][k]
+
+
+    if autonomous_system:
+      js ["global-system-config"]["autonomous_system"]=autonomous_system
     ## end: object specific
 
 
     payload=json.dumps(js)
+    #print (payload)
+    #print (js.get("global-system-config").get("uuid"))
+    #sys.exit(35)
 
     failed = crud (web_api, controller_ip, update, state, result, payload=payload, obj_type=obj_type, uuid=uuid)
 
