@@ -14,7 +14,12 @@ def login_and_check_id(name, obj_type, controller_ip, username, password, state,
     web_api_url = 'https://' + controller_ip + ':8143/'
 
     ## check if the fqname exists
-    response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "%s", "fq_name": ["%s", "%s", "%s"]}' % (obj_type, domain, project, name), headers=vnc_api_headers)
+    if (obj_type in ['global-system-config']):
+      response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "%s", "fq_name": ["default-global-system-config"]}' % (obj_type), headers=vnc_api_headers)
+    elif (obj_type in ['global-vrouter-config']):
+      response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "%s", "fq_name": ["default-global-system-config", "default-global-vrouter-config"]}' % (obj_type), headers=vnc_api_headers)
+    else:
+      response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "%s", "fq_name": ["%s", "%s", "%s"]}' % (obj_type, domain, project, name), headers=vnc_api_headers)
     if response.status_code == 200:
       update = True
       uuid = json.loads(response.text).get("uuid")
