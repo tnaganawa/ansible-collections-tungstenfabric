@@ -8,23 +8,31 @@ import requests
 
 vnc_api_headers= {"Content-Type": "application/json", "charset": "UTF-8"}
 
-def login_and_check_id(name, obj_type, controller_ip, username, password, domain='default-domain', project='default-project'):
+def login_and_check_id(name, obj_type, controller_ip, username, password, state, domain='default-domain', project='default-project'):
     config_api_url = 'http://' + controller_ip + ':8082/'
     web_api_url = 'https://' + controller_ip + ':8143/'
 
     ## check if the fqname exists
-    response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "obj_type", "fq_name": ["%s", "%s", "%s"]}' % (obj_type, domain, project, name), headers=vnc_api_headers)
+    response = requests.post(config_api_url + 'fqname-to-id', data='{"type": obj_type, "fq_name": ["%s", "%s", "%s"]}' % (obj_type, domain, project, name), headers=vnc_api_headers)
     if response.status_code == 200:
       update = True
       uuid = json.loads(response.text).get("uuid")
     else:
       update = False
+      uuid=''
 
     ## login to web API
     web_api = requests.session()
     response = web_api.post(web_api_url + 'authenticate', data=json.dumps({"username": username, "password": password}), headers=vnc_api_headers, verify=False)
+    csrftoken=client.cookies['_csrf']
+    vnc_api_headers["x-csrf-token"]=csrftoken
 
-    return (update, web_api)
+    js={}
+    if update and state=='present':
+      response = client.post(web_api_url + 'api/tenants/config/get-config-objects', data=json.dumps({"data": [{"type": obj_type, "uuid": ["{}".format(uuid)]}]}), headers=vnc_api_headers, verify=False)
+      js = json.loads(response.text)[0]
+
+    return (web_api, update, uuid, js)
 
 
 ##
@@ -58,5 +66,5 @@ def crud(web_api, state, result, payload='{}', obj_type='', uuid=''):
 
     result['message'] = message
 
-    return result
+    return failed
 

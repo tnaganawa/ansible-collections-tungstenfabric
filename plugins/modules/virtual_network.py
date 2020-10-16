@@ -151,7 +151,7 @@ def run_module():
     ## login to web API
     client = requests.session()
     response = client.post(web_api_url + 'authenticate', data=json.dumps({"username": username, "password": password}), headers=vnc_api_headers, verify=False)
-    print (client.cookies)
+    #print (client.cookies)
     csrftoken=client.cookies['_csrf']
     vnc_api_headers["x-csrf-token"]=csrftoken
 
