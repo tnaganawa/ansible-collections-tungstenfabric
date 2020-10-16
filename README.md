@@ -9,9 +9,13 @@ pip install virtualenv
 virtualenv venv
 source venv/bin/activate
 pip install ansible requests
+
+
 git clone https://github.com/tnaganawa/ansible-collections-tungstenfabric.git
 mkdir -p ~/.ansible/collections/ansible_collections/tungstenfabric/networking/
 mv -i ansible-collections-tungstenfabric/plugins/ ~/.ansible/collections/ansible_collections/tungstenfabric/networking/
+ or
+ansible-galaxy collection install git+https://github.com/tnaganawa/ansible-collections-tungstenfabric.git
 ```
 
  - For ansible collentions to work, ansible 2.9 or later is required.
