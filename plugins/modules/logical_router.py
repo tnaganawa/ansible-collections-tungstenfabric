@@ -65,9 +65,11 @@ message:
     returned: always
 '''
 
+import sys
 import json
 import requests
 from ansible.module_utils.basic import AnsibleModule
+import ansible_collections.tungstenfabric.networking.plugins.module_utils.common
 
 def run_module():
     module_args = dict(
@@ -79,7 +81,7 @@ def run_module():
         uuid=dict(type='str', required=False),
         domain=dict(type='str', required=False, default='default-domain'),
         project=dict(type='str', required=False, default='default-project'),
-        router_type=dict(type='str', required=False, choices=['snat-routing', 'vxlan-routing'])
+        router_type=dict(type='str', required=False, choices=['snat-routing', 'vxlan-routing']),
         connected_networks=dict(type='list', required=False)
     )
     result = dict(
@@ -138,12 +140,22 @@ def run_module():
     ''' % (domain, project, name)
     )
 
-    #if subnet:
-    #  js ["logical-router"]["network_ipam_refs"]=[
-    #    {"to": ["default-domain", "default-project", "default-network-ipam"],
-    #    "attr": {"ipam_subnets": [{"subnet": {"ip_prefix": subnet, "ip_prefix_len": subnet_prefix}}]}
-    #    }
-    #  ]
+    if router_type:
+      js ["logical-router"]["logical_router_type"]=router_type
+
+    print ("connected_networks", connected_networks)
+    if len(connected_networks) > 0:
+      print ("try to connect", connected_networks)
+      js ["logical-router"]["virtual_machine_interface_refs"]=[]
+      for network in connected_networks:
+        js ["logical-router"]["virtual_machine_interface_refs"].append(
+         {
+           "parent_type":"project",
+           "fq_name": [domain,project],
+           "virtual_network_refs":[{"to":[domain, project, network]}],
+           "virtual_machine_interface_device_owner":"network:router_interface"
+         }
+        )
 
 
     if state == "present":

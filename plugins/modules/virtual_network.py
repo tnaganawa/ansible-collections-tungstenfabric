@@ -73,9 +73,11 @@ message:
     returned: always
 '''
 
+import sys
 import json
 import requests
 from ansible.module_utils.basic import AnsibleModule
+import ansible_collections.tungstenfabric.networking.plugins.module_utils.common
 
 def run_module():
     module_args = dict(
@@ -99,7 +101,7 @@ def run_module():
         allow_transit=dict(type='bool', required=False),
         forwarding_mode=dict(type='str', required=False, choices=['default', 'l2_l3', 'l3', 'l2']),
         max_flows=dict(type='int', required=False),
-        rpf=dict(type='bool', required=False),
+        rpf=dict(type='str', required=False, choices=['enable', 'disable']),
         vxlan_network_identifier=dict(type='int', required=False)
     )
     result = dict(
@@ -121,6 +123,13 @@ def run_module():
     project = module.params.get("project")
     subnet = module.params.get("subnet")
     subnet_prefix = module.params.get("subnet_prefix")
+    flood_unknown_unicast = module.params.get("flood_unknown_unicast")
+    ip_fabric_forwarding = module.params.get("ip_fabric_forwarding")
+    fabric_snat = module.params.get("fabric_snat")
+    rpf = module.params.get("rpf")
+    allow_transit = module.params.get("allow_transit")
+    forwarding_mode = module.params.get("forwarding_mode")
+    vxlan_network_identifier = module.params.get("vxlan_network_identifier")
 
     if module.check_mode:
         module.exit_json(**result)
@@ -146,17 +155,21 @@ def run_module():
     csrftoken=client.cookies['_csrf']
     vnc_api_headers["x-csrf-token"]=csrftoken
 
-    ## create payload and call API
-    js=json.loads (
-    '''
-    { "virtual-network":
-      {
-        "fq_name": ["%s", "%s", "%s"],
-        "parent_type": "project"
+    if update and state=='present':
+      response = client.post(web_api_url + 'api/tenants/config/get-config-objects', data=json.dumps({"data": [{"type": "virtual-network", "uuid": ["{}".format(uuid)]}]}), headers=vnc_api_headers, verify=False)
+      js = json.loads(response.text)[0]
+    else:
+      ## create payload and call API
+      js=json.loads (
+      '''
+      { "virtual-network":
+        {
+          "fq_name": ["%s", "%s", "%s"],
+          "parent_type": "project"
+        }
       }
-    }
-    ''' % (domain, project, name)
-    )
+      ''' % (domain, project, name)
+      )
 
     if subnet:
       js ["virtual-network"]["network_ipam_refs"]=[
@@ -164,6 +177,23 @@ def run_module():
         "attr": {"ipam_subnets": [{"subnet": {"ip_prefix": subnet, "ip_prefix_len": subnet_prefix}}]}
         }
       ]
+    if flood_unknown_unicast:
+      js ["virtual-network"]["flood_unknown_unicast"]=True
+    if ip_fabric_forwarding:
+      js ["virtual-network"]["ip_fabric_forwarding"]=True
+    if fabric_snat:
+      js ["virtual-network"]["fabric_snat"]=True
+
+    if js["virtual-network"].get("virtual_network_properties")==None:
+      js ["virtual-network"]["virtual_network_properties"]={}
+    if rpf:
+      js ["virtual-network"]["virtual_network_properties"]["rpf"]=rpf
+    if allow_transit:
+      js ["virtual-network"]["virtual_network_properties"]["allow_transit"]=allow_transit
+    if forwarding_mode:
+      js ["virtual-network"]["virtual_network_properties"]["forwarding_mode"]=forwarding_mode
+    if vxlan_network_identifier:
+      js ["virtual-network"]["virtual_network_properties"]["vxlan_network_identifier"]=vxlan_network_identifier
 
 
     if state == "present":

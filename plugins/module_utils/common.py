@@ -31,7 +31,7 @@ def login_and_check_id(name, obj_type, controller_ip, username, password, domain
 # crud (web_api, 'present', result, payload)
 # crud (web_api, 'absent', result, obj_type='virtual-network', uuid='xxxx-xxxx')
 ##
-def crud(web_api, state, result, payload='{}', obj_type='', uuid='')
+def crud(web_api, state, result, payload='{}', obj_type='', uuid=''):
     csrftoken=web_api.cookies['_csrf']
     vnc_api_headers["x-csrf-token"]=csrftoken
 
