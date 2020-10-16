@@ -3,6 +3,7 @@
 # Copyright: (c) 2020, Tatsuya Naganawa <tatsuyan201101@gmail.com>
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
+import sys
 import json
 import requests
 
@@ -13,7 +14,7 @@ def login_and_check_id(name, obj_type, controller_ip, username, password, state,
     web_api_url = 'https://' + controller_ip + ':8143/'
 
     ## check if the fqname exists
-    response = requests.post(config_api_url + 'fqname-to-id', data='{"type": obj_type, "fq_name": ["%s", "%s", "%s"]}' % (obj_type, domain, project, name), headers=vnc_api_headers)
+    response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "%s", "fq_name": ["%s", "%s", "%s"]}' % (obj_type, domain, project, name), headers=vnc_api_headers)
     if response.status_code == 200:
       update = True
       uuid = json.loads(response.text).get("uuid")
@@ -24,12 +25,12 @@ def login_and_check_id(name, obj_type, controller_ip, username, password, state,
     ## login to web API
     web_api = requests.session()
     response = web_api.post(web_api_url + 'authenticate', data=json.dumps({"username": username, "password": password}), headers=vnc_api_headers, verify=False)
-    csrftoken=client.cookies['_csrf']
+    csrftoken=web_api.cookies['_csrf']
     vnc_api_headers["x-csrf-token"]=csrftoken
 
     js={}
     if update and state=='present':
-      response = client.post(web_api_url + 'api/tenants/config/get-config-objects', data=json.dumps({"data": [{"type": obj_type, "uuid": ["{}".format(uuid)]}]}), headers=vnc_api_headers, verify=False)
+      response = web_api.post(web_api_url + 'api/tenants/config/get-config-objects', data=json.dumps({"data": [{"type": obj_type, "uuid": ["{}".format(uuid)]}]}), headers=vnc_api_headers, verify=False)
       js = json.loads(response.text)[0]
 
     return (web_api, update, uuid, js)
@@ -39,7 +40,10 @@ def login_and_check_id(name, obj_type, controller_ip, username, password, state,
 # crud (web_api, 'present', result, payload)
 # crud (web_api, 'absent', result, obj_type='virtual-network', uuid='xxxx-xxxx')
 ##
-def crud(web_api, state, result, payload='{}', obj_type='', uuid=''):
+def crud(web_api, controller_ip, update, state, result, payload='{}', obj_type='', uuid=''):
+    web_api_url = 'https://' + controller_ip + ':8143/'
+    failed=False
+
     csrftoken=web_api.cookies['_csrf']
     vnc_api_headers["x-csrf-token"]=csrftoken
 
@@ -53,9 +57,10 @@ def crud(web_api, state, result, payload='{}', obj_type='', uuid=''):
     elif (state == "absent"):
       if update:
         print ("delete object {}".format(uuid))
-        response = web_api.post(web_api_url + 'api/tenants/config/delete', data=json.dumps([{"type": "virtual-network", "deleteIDs": ["{}".format(uuid)]}]), headers=vnc_api_headers, verify=False)
+        response = web_api.post(web_api_url + 'api/tenants/config/delete', data=json.dumps([{"type": obj_type, "deleteIDs": ["{}".format(uuid)]}]), headers=vnc_api_headers, verify=False)
       else:
         failed = True
+        raise Exception
     message = response.text
 
     if response.status_code == 200:

@@ -11,19 +11,19 @@ ANSIBLE_METADATA = {
 
 DOCUMENTATION = '''
 ---
-module: network_policy
+module: bgp_as_a_service
 
-short_description: create tungstenfabirc network-policy
+short_description: create tungstenfabirc bgp-as-a-service
 
 version_added: "2.9"
 
 description:
-    - "create / delete tungstenfabric network-policy"
+    - "create / delete tungstenfabric bgp-as-a-service"
 
 options:
     name:
         description:
-            - network-policy name
+            - bgp-as-a-service name
         required: true
     controller_ip:
         description:
@@ -31,11 +31,11 @@ options:
         required: true
     domain:
         description:
-            - network-policy subnet
+            - bgp-as-a-service subnet
         required: false
     project:
         description:
-            - network-policy subnet
+            - bgp-as-a-service subnet
         required: false
 
 author:
@@ -44,15 +44,15 @@ author:
 
 EXAMPLES = '''
 # Pass in a message
-- name: create network-policy
-  tungstenfabric.network_policy.network_policy:
-    name: network-policy1
+- name: create bgp-as-a-service
+  tungstenfabric.bgp_as_a_service.bgp_as_a_service:
+    name: bgp-as-a-service1
     controller_ip: x.x.x.x
     state: present
 
-- name: delete network-policy
-  tungstenfabric.network_policy.network_policy:
-    name: network-policy1
+- name: delete bgp-as-a-service
+  tungstenfabric.bgp_as_a_service.bgp_as_a_service:
+    name: bgp-as-a-service1
     controller_ip: x.x.x.x
     state: absent
 
@@ -64,6 +64,54 @@ message:
     type: str
     returned: always
 '''
+
+'''
+  "bgpaas_ip_address": "10.0.1.4",
+  "bgpaas_ipv4_mapped_ipv6_nexthop": false,
+  "bgpaas_session_attributes": {
+    "address_families": {
+      "family": [
+        "inet"
+      ]
+    },
+    "admin_down": false,
+    "as_override": false,
+    "auth_data": null,
+    "family_attributes": [
+      {
+        "address_family": "inet",
+        "prefix_limit": {
+          "idle_timeout": 0,
+          "maximum": 0
+        }
+      }
+    ],
+    "hold_time": 0,
+    "loop_count": 0,
+    "route_origin_override": {
+      "origin": "IGP",
+      "origin_override": false
+    }
+  },
+  "bgpaas_shared": false,
+  "bgpaas_suppress_route_advertisement": false,
+
+  "virtual_machine_interface_refs": [
+    {
+      "attr": null,
+      "href": "http://192.168.122.111:8082/virtual-machine-interface/94dcb507-80c4-41d5-bf6e-01137d359a63",
+      "to": [
+        "default-domain",
+        "admin",
+        "94dcb507-80c4-41d5-bf6e-01137d359a63"
+      ],
+      "uuid": "94dcb507-80c4-41d5-bf6e-01137d359a63"
+    }
+  ]
+
+'''
+
+
 
 import sys
 import json
@@ -103,7 +151,7 @@ def run_module():
     if module.check_mode:
         module.exit_json(**result)
 
-    obj_type='network-policy'
+    obj_type='bgp-as-a-service'
 
     (web_api, update, uuid, js) = login_and_check_id(name, obj_type, controller_ip, username, password, state, domain=domain, project=project)
 
@@ -114,7 +162,7 @@ def run_module():
       ## create payload and call API
       js=json.loads (
       '''
-      { "network-policy":
+      { "bgp-as-a-service":
         {
           "fq_name": ["%s", "%s", "%s"],
           "parent_type": "project"
