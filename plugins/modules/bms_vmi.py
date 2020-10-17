@@ -76,7 +76,7 @@ import sys
 import json
 import requests
 from ansible.module_utils.basic import AnsibleModule
-from ansible_collections.tungstenvirtual-port-group.networking.plugins.module_utils.common import login_and_check_id, crud
+from ansible_collections.tungstenfabric.networking.plugins.module_utils.common import login_and_check_id, crud
 
 def run_module():
     module_args = dict(
@@ -113,6 +113,9 @@ def run_module():
 
     ## begin: object specific
     config_api_url = 'http://' + controller_ip + ':8082/'
+    vnc_api_headers= {"Content-Type": "application/json", "charset": "UTF-8"}
+
+    failed=False
 
     for vpg_name, vn_name, vlan_id in vpg_vn_vlan_list:
 
@@ -122,7 +125,7 @@ def run_module():
         tmp = json.loads(response.text)
         vpg_uuid = tmp.get("uuid")
 
-        response = requests.get(config_api_url + 'virtual-machine-interface/' + vpg_uuid, headers=vnc_api_headers)
+        response = requests.get(config_api_url + 'virtual-port-group/' + vpg_uuid, headers=vnc_api_headers)
         vpg_vmi_refs = json.loads(response.text).get("virtual_machine_interface_refs")
       else:
         failed = True
@@ -140,29 +143,33 @@ def run_module():
           module.fail_json(msg="cannot assign / delete vlan-id / vn pair, since vpg is not available", **result)
 
         # create vmi with vpg_uuid, vn_uuid and vlan-id
-        js=json.loads (
-        '''
+        tmp_str = '''
         { "virtual-machine-interface":
           {
             "fq_name": ["%s", "%s", "%s"],
             "parent_type": "project",
             "device_owner": "baremetal:None",
             "virtual_machine_interface_bindings": {
-              "vnic_type": "baremetal",
-              "vpg": "%s",
-              "profile": {"local_link_information": {"fabric": "", "switch_info": "", "port_id": ""}}
+              "key_value_pair": [
+                {"key": "vpg", "value": "%s"},
+                {"key": "vnic_type", "value": "baremetal"},
+                {"key": "vif_type", "value": "vrouter"},
+                {"key": "profile", "value": "{%s}"}
+              ]
             },
             "virtual_network_refs": [
              {
              "to": ["%s", "%s", "%s"],
-             "uuid": "%s",
+             "uuid": "%s"
              }
             ],
             "sub_inteface_vlan_tag": "%s"
           }
         }
-        ''' % (domain, project, "".join (vpg_name, '-', project, '-', vn_name, '-', str(vlan_id)), vpg_name, domain, project, vn_name, vn_uuid, vlan_id)
-        )
+        ''' % (domain, project, "".join ((vpg_name, '-', project, '-', vn_name, '-', str(vlan_id))), vpg_name, r'\"local_link_information\":[{\"fabric\":\"fab1\", \"port_id\":\"xe-0/0/9\", \"switch_info\":\"leaf1\"}]', domain, project, vn_name, vn_uuid, vlan_id)
+
+        js=json.loads (tmp_str)
+
         response = requests.post(config_api_url + 'virtual-machine-interfaces', data=json.dumps(js), headers=vnc_api_headers)
         if not response.status_code == 200:
           failed = True

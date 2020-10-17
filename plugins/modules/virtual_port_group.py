@@ -74,7 +74,7 @@ import sys
 import json
 import requests
 from ansible.module_utils.basic import AnsibleModule
-from ansible_collections.tungstenvirtual-port-group.networking.plugins.module_utils.common import login_and_check_id, crud
+from ansible_collections.tungstenfabric.networking.plugins.module_utils.common import login_and_check_id, crud
 
 def run_module():
     module_args = dict(
@@ -85,7 +85,7 @@ def run_module():
         state=dict(type='str', required=False, default='present', choices=['absent', 'present']),
         domain=dict(type='str', required=False, default='default-domain'),
         project=dict(type='str', required=False, default='admin'),
-        physical_interfaces=dict(type='list', required=False, default='root')
+        physical_interfaces=dict(type='list', required=False)
     )
     result = dict(
         changed=False,
@@ -115,9 +115,30 @@ def run_module():
 
     ## begin: object specific
     config_api_url = 'http://' + controller_ip + ':8082/'
+    vnc_api_headers= {"Content-Type": "application/json", "charset": "UTF-8"}
+
+    failed=False
+
+
+    ## create physical_interface_refs when physical_interface is not empty
+    physical_interface_refs=[]
+    if state == 'present' and physical_interfaces:
+        for device, physical_interface in physical_interfaces:
+
+          # get uuid of physical-interface
+          response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "physical_interface", "fq_name": ["default-global-system-config", "%s", "%s"]}' % (device, physical_interface), headers=vnc_api_headers)
+          if not response.status_code == 200:
+            failed = True
+            result["message"] = response.text
+            module.fail_json(msg="physical-interface doesn't exist", **result)
+          pi_uuid = json.loads(response.text).get("uuid")
+
+          physical_interface_refs.append({"uuid": pi_uuid, "to": ["default-global-config", device, physical_interface], "attr": None})
+
     if update:
       if state == 'present':
         # add physical-interfaces
+        js["virtual-port-group"]["physical_interface_refs"]=physical_interface_refs
         response = requests.put(config_api_url + 'virtual-port-group/' + uuid, data=json.dumps(js), headers=vnc_api_headers)
         if not response.status_code == 200:
           failed = True
@@ -132,7 +153,7 @@ def run_module():
           result["message"] = response.text
           module.fail_json(msg="vpg deletion failed", **result)
     else:
-      if state == 'present'
+      if state == 'present':
         js=json.loads (
         '''
         { "virtual-port-group":
@@ -150,7 +171,10 @@ def run_module():
           module.fail_json(msg="vpg creation failed", **result)
 
         # add physical-interfaces
-        uuid = response.text.get("virtual-port-group").get("uuid")
+        uuid = json.loads(response.text).get("virtual-port-group").get("uuid")
+
+        js["virtual-port-group"]["physical_interface_refs"]=physical_interface_refs
+
         response = requests.put(config_api_url + 'virtual-port-group/' + uuid, data=json.dumps(js), headers=vnc_api_headers)
         if not response.status_code == 200:
           failed = True
