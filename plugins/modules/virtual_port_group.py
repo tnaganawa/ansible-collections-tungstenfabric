@@ -11,19 +11,19 @@ ANSIBLE_METADATA = {
 
 DOCUMENTATION = '''
 ---
-module: fabric
+module: virtual_port_group
 
-short_description: create tungstenfabirc fabric
+short_description: create tungstenfabirc virtual-port-group
 
 version_added: "2.9"
 
 description:
-    - "create / delete tungstenfabric fabric"
+    - "create / delete tungstenfabric virtual-port-group"
 
 options:
     name:
         description:
-            - fabric name
+            - virtual-port-group name
         required: true
     controller_ip:
         description:
@@ -31,11 +31,11 @@ options:
         required: true
     domain:
         description:
-            - fabric subnet
+            - domain for this vpg
         required: false
     project:
         description:
-            - fabric subnet
+            - project for this vpg
         required: false
 
 author:
@@ -44,15 +44,18 @@ author:
 
 EXAMPLES = '''
 # Pass in a message
-- name: create fabric
-  tungstenfabric.networking.fabric:
-    name: fabric1
+- name: create virtual-port-group
+  tungstenfabric.networking.virtual_port_group:
+    name: virtual-port-group1
     controller_ip: x.x.x.x
     state: present
+    physical_interfaces:
+      - [leaf1, xe-0/0/3]
+      - [leaf2, xe-0/0/3]
 
-- name: delete fabric
-  tungstenfabric.networking.fabric:
-    name: fabric1
+- name: delete virtual-port-group
+  tungstenfabric.networking.virtual_port_group:
+    name: virtual-port-group1
     controller_ip: x.x.x.x
     state: absent
 
@@ -71,7 +74,7 @@ import sys
 import json
 import requests
 from ansible.module_utils.basic import AnsibleModule
-from ansible_collections.tungstenfabric.networking.plugins.module_utils.common import login_and_check_id, crud
+from ansible_collections.tungstenvirtual-port-group.networking.plugins.module_utils.common import login_and_check_id, crud
 
 def run_module():
     module_args = dict(
@@ -82,9 +85,7 @@ def run_module():
         state=dict(type='str', required=False, default='present', choices=['absent', 'present']),
         domain=dict(type='str', required=False, default='default-domain'),
         project=dict(type='str', required=False, default='admin'),
-        device_username=dict(type='str', required=False, default='root'),
-        device_password=dict(type='str', required=False, default='lab123'),
-        management_subnets=dict(type='list', required=False),
+        physical_interfaces=dict(type='list', required=False, default='root')
     )
     result = dict(
         changed=False,
@@ -103,14 +104,12 @@ def run_module():
     state = module.params.get("state")
     domain = module.params.get("domain")
     project = module.params.get("project")
-    device_username = module.params.get("device_username")
-    device_password = module.params.get("device_password")
-    management_subnets = module.params.get("manamanagement_subnets")
+    physical_interfaces = module.params.get("physical_interfaces")
 
     if module.check_mode:
         module.exit_json(**result)
 
-    obj_type='fabric'
+    obj_type='virtual-port-group'
 
     (web_api, update, uuid, js) = login_and_check_id(name, obj_type, controller_ip, username, password, state, domain=domain, project=project)
 
@@ -118,35 +117,49 @@ def run_module():
     config_api_url = 'http://' + controller_ip + ':8082/'
     if update:
       if state == 'present':
-        result["message"] = "fabric is already onboarded, nothing to do"
-      elif state == 'absent':
-        # delete fabric
-        payload = {'job_template_fq_name': ['default-global-system-config', 'fabric_deletion_template'], "job_input": {'fabric_fq_name': ["default-global-system-config", name]}}
-        response = requests.post(config_api_url + 'execute-job', data=json.js(payload), headers=vnc_api_headers)
+        # add physical-interfaces
+        response = requests.put(config_api_url + 'virtual-port-group/' + uuid, data=json.dumps(js), headers=vnc_api_headers)
         if not response.status_code == 200:
           failed = True
           result["message"] = response.text
-      else:
-        module.fail_json(msg='cannot reach here', **result)
+          module.fail_json(msg="physical interface addition failed", **result)
+
+      elif state == 'absent':
+        # delete virtual-port-group
+        response = requests.delete(config_api_url + 'virtual-port-group/' + uuid, data=json.dumps(js), headers=vnc_api_headers)
+        if not response.status_code == 200:
+          failed = True
+          result["message"] = response.text
+          module.fail_json(msg="vpg deletion failed", **result)
     else:
       if state == 'present'
-        management_subnets_dict= [{"cidr": manamanagement_subnet } for management_subnet in management_subnets]
-        job_input = {'fabric_fq_name': ["default-global-system-config", name],
-                       'node_profiles': [{"node_profile_name": 'juniper-mx'}, {"node_profile_name": 'juniper-qfx10k'}, {"node_profile_name": 'juniper-qfx10k-lean'}, 
-                                         {"node_profile_name": 'juniper-qfx5k'}, {"node_profile_name": 'juniper-qfx5k-lean'}, {"node_profile_name": 'juniper-srx'}]
-                       'device_auth': [{"username": device_username, "password": device_password}],
-                       'overlay_ibgp_asn': 64512,
-                       'management_subnets': management_subnets_dict,
-                       'enterprise_style': True
-                   }
-        payload = {'job_template_fq_name': ['default-global-system-config', 'existing_fabric_onboard_template'], "job_input": job_input}
-        response = requests.post(config_api_url + 'execute-job', data=json.js(payload), headers=vnc_api_headers)
+        js=json.loads (
+        '''
+        { "virtual-port-group":
+          {
+            "fq_name": ["%s", "%s", "%s"],
+            "parent_type": "project"
+          }
+        }
+        ''' % (domain, project, name)
+        )
+        response = requests.post(config_api_url + 'virtual-port-groups', data=json.dumps(js), headers=vnc_api_headers)
         if not response.status_code == 200:
           failed = True
           result["message"] = response.text
+          module.fail_json(msg="vpg creation failed", **result)
+
+        # add physical-interfaces
+        uuid = response.text.get("virtual-port-group").get("uuid")
+        response = requests.put(config_api_url + 'virtual-port-group/' + uuid, data=json.dumps(js), headers=vnc_api_headers)
+        if not response.status_code == 200:
+          failed = True
+          result["message"] = response.text
+          module.fail_json(msg="physical interface addition failed", **result)
+
       else:
-        module.fail_json(msg='cannot reach here', **result)
-    
+        module.fail_json(msg="vpg doesn't exist", **result)
+
 
     ## end: object specific
 

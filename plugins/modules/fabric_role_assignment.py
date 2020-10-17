@@ -86,7 +86,7 @@ def run_module():
         password=dict(type='str', required=False, default='contrail123'),
         state=dict(type='str', required=False, default='present', choices=['absent', 'present']),
         domain=dict(type='str', required=False, default='default-domain'),
-        project=dict(type='str', required=False, default='default-project'),
+        project=dict(type='str', required=False, default='admin'),
         dict_device_role=dict(type='dict', required=False, default='root')
     )
     result = dict(
