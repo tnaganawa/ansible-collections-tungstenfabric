@@ -102,7 +102,8 @@ def run_module():
         forwarding_mode=dict(type='str', required=False, choices=['default', 'l2_l3', 'l3', 'l2']),
         max_flows=dict(type='int', required=False),
         rpf=dict(type='str', required=False, choices=['enable', 'disable']),
-        vxlan_network_identifier=dict(type='int', required=False)
+        vxlan_network_identifier=dict(type='int', required=False),
+        network_policy_refs=dict(type='list', required=False)
     )
     result = dict(
         changed=False,
@@ -130,6 +131,7 @@ def run_module():
     allow_transit = module.params.get("allow_transit")
     forwarding_mode = module.params.get("forwarding_mode")
     vxlan_network_identifier = module.params.get("vxlan_network_identifier")
+    network_policy_refs = module.params.get("network_policy_refs")
 
     if module.check_mode:
         module.exit_json(**result)
@@ -183,6 +185,17 @@ def run_module():
       js ["virtual-network"]["ip_fabric_forwarding"]=True
     if fabric_snat:
       js ["virtual-network"]["fabric_snat"]=True
+    if network_policy_refs:
+      # ["default-domain:admin:network-policy1"], []]
+      network_policy_refs_list=[]
+      for np_fqname in network_policy_refs:
+        response = requests.post(config_api_url + 'fqname-to-id', data=json.dumps({"type": "network-policy", "fq_name": np_fqname.split(":")}), headers=vnc_api_headers)
+        if not response.status_code == 200:
+          module.fail_json(msg="network-policy specified doesn't exist", **result)
+        np_uuid = json.loads(response.text).get("uuid")
+        network_policy_refs_list.append ({"to": np_fqname.split(":"), "uuid": np_uuid})
+
+      js ["virtual-network"]["network_policy_refs"]=network_policy_refs_list
 
     if js["virtual-network"].get("virtual_network_properties")==None:
       js ["virtual-network"]["virtual_network_properties"]={}

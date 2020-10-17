@@ -81,6 +81,7 @@ def run_module():
         uuid=dict(type='str', required=False),
         domain=dict(type='str', required=False, default='default-domain'),
         project=dict(type='str', required=False, default='default-project'),
+        policy_rule=dict(type='list', required=False)
     )
     result = dict(
         changed=False,
@@ -99,6 +100,7 @@ def run_module():
     state = module.params.get("state")
     domain = module.params.get("domain")
     project = module.params.get("project")
+    policy_rule = module.params.get("policy_rule")
 
     if module.check_mode:
         module.exit_json(**result)
@@ -124,6 +126,8 @@ def run_module():
     )
 
     ## begin: object specific
+    if (policy_rule):
+      js["network-policy"]["network_policy_entries"] = {"policy_rule": policy_rule}
 
     ## end: object specific
 

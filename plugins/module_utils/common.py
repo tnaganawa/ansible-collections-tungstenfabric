@@ -68,8 +68,9 @@ def crud(web_api, controller_ip, update, state, result, payload='{}', obj_type='
         print ("delete object {}".format(uuid))
         response = web_api.post(web_api_url + 'api/tenants/config/delete', data=json.dumps([{"type": obj_type, "deleteIDs": ["{}".format(uuid)]}]), headers=vnc_api_headers, verify=False)
       else:
-        failed = True
-        raise Exception
+        result["message"]="delete is requested, but that fq_name is not avaialbe"
+        result["changed"]=False
+        return True
     message = response.text
 
     if response.status_code == 200:
