@@ -37,6 +37,10 @@ options:
         description:
             - project for this vpg
         required: false
+    fabric:
+        description:
+            - fabric for this vpg
+        required: false
 
 author:
     - Tatsuya Naganawa (@tnaganawa)
@@ -85,6 +89,7 @@ def run_module():
         state=dict(type='str', required=False, default='present', choices=['absent', 'present']),
         domain=dict(type='str', required=False, default='default-domain'),
         project=dict(type='str', required=False, default='admin'),
+        fabric=dict(type='str', required=True),
         physical_interfaces=dict(type='list', required=False)
     )
     result = dict(
@@ -104,6 +109,7 @@ def run_module():
     state = module.params.get("state")
     domain = module.params.get("domain")
     project = module.params.get("project")
+    fabric = module.params.get("fabric")
     physical_interfaces = module.params.get("physical_interfaces")
 
     if module.check_mode:
@@ -111,7 +117,7 @@ def run_module():
 
     obj_type='virtual-port-group'
 
-    (web_api, update, uuid, js) = login_and_check_id(name, obj_type, controller_ip, username, password, state, domain=domain, project=project)
+    (web_api, update, uuid, js) = login_and_check_id(name, obj_type, controller_ip, username, password, state, domain=domain, project=project, fabric=fabric)
 
     ## begin: object specific
     config_api_url = 'http://' + controller_ip + ':8082/'
@@ -158,11 +164,11 @@ def run_module():
         '''
         { "virtual-port-group":
           {
-            "fq_name": ["%s", "%s", "%s"],
-            "parent_type": "project"
+            "fq_name": ["default-global-system-config", "%s", "%s"],
+            "parent_type": "fabric"
           }
         }
-        ''' % (domain, project, name)
+        ''' % (fabric, name)
         )
         response = requests.post(config_api_url + 'virtual-port-groups', data=json.dumps(js), headers=vnc_api_headers)
         if not response.status_code == 200:

@@ -32,3 +32,36 @@ delete:
 ansible -m tungstenfabric.networking.virtual_network localhost -a 'name=vn1 controller_ip=x.x.x.x state=absent'
 ```
 
+### from playbook
+
+```
+# cat virtual-port-group.yaml
+- name: create vpg
+  hosts: localhost
+  tasks:
+  - name: create vpg
+    tungstenfabric.networking.virtual_port_group:
+      name: vpg1
+      controller_ip: x.x.x.x
+      state: present
+      fabric: fabric1
+      physical_interfaces:
+        - [leaf1, xe-0/0/9]
+        - [leaf2, xe-0/0/9]
+
+# cat bms_vmi.yaml
+- name: add vn vlan pair
+  hosts: localhost
+  tasks:
+  - name: add vn vlan pair
+    tungstenfabric.networking.bms_vmi:
+      controller_ip: x.x.x.x
+      state: present
+      fabric: fabric1
+      vpg_vn_vlan_list:
+       - [vpg1, vn111, 111]
+       - [vpg1, vn112, 112]
+
+# ansible-playbook -i localhost virtual-port-group.yaml
+# ansible-playbook -i localhost bms_vmi.yaml
+```

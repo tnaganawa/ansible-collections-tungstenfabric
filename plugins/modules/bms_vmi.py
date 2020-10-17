@@ -86,6 +86,7 @@ def run_module():
         state=dict(type='str', required=False, default='present', choices=['absent', 'present']),
         domain=dict(type='str', required=False, default='default-domain'),
         project=dict(type='str', required=False, default='admin'),
+        fabric=dict(type='str', required=True),
         vpg_vn_vlan_list=dict(type='list', required=True)
     )
     result = dict(
@@ -105,6 +106,7 @@ def run_module():
     state = module.params.get("state")
     domain = module.params.get("domain")
     project = module.params.get("project")
+    fabric = module.params.get("fabric")
     vpg_vn_vlan_list = module.params.get("vpg_vn_vlan_list")
 
     if module.check_mode:
@@ -119,20 +121,33 @@ def run_module():
 
     for vpg_name, vn_name, vlan_id in vpg_vn_vlan_list:
 
-      ## check if the fqname exists
-      response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "virtual-port-group", "fq_name": ["%s", "%s", "%s"]}' % (domain, project, vpg_name), headers=vnc_api_headers)
+      ## check if the vpg exists
+      response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "virtual-port-group", "fq_name": ["default-global-system-config", "%s", "%s"]}' % (fabric, vpg_name), headers=vnc_api_headers)
       if response.status_code == 200:
         tmp = json.loads(response.text)
         vpg_uuid = tmp.get("uuid")
 
         response = requests.get(config_api_url + 'virtual-port-group/' + vpg_uuid, headers=vnc_api_headers)
-        vpg_vmi_refs = json.loads(response.text).get("virtual_machine_interface_refs")
+        vpg_vmi_refs = json.loads(response.text).get("virtual-port-group").get("virtual_machine_interface_refs")
+        physical_interface_refs = json.loads(response.text).get("virtual-port-group").get("physical_interface_refs")
+
+        if response.status_code == 200:
+          pass
+        else:
+          failed = True
+          result["message"] = response.text
+          module.fail_json(msg="cannot get vpg detail", **result)
       else:
         failed = True
         result["message"] = response.text
         module.fail_json(msg="cannot assign / delete vlan-id / vn pair, since vpg is not available", **result)
 
       if state == 'present':
+        # TODO:
+        # check vpg's virtual_machine_interface refs and get attr vlan_tag
+        # annotation or virtual_machine_interface_refs' attr
+        # skip this if already available
+
         # check virtual-network uuid
         response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "virtual-network", "fq_name": ["%s", "%s", "%s"]}' % (domain, project, vn_name), headers=vnc_api_headers)
         if response.status_code == 200:
@@ -140,7 +155,15 @@ def run_module():
         else:
           failed = True
           result["message"] = response.text
-          module.fail_json(msg="cannot assign / delete vlan-id / vn pair, since vpg is not available", **result)
+          module.fail_json(msg="cannot assign / delete vlan-id / vn pair, since vn is not available", **result)
+
+        # local link information: please make them the same with vpg side definition, since this definition will update VPG pi refs ..
+        local_link_information_list=[]
+        for pi_refs in physical_interface_refs:
+          port_id=pi_refs.get("to")[2]
+          switch_info=pi_refs.get("to")[1]
+          local_link_information_list.append({"fabric": fabric, "switch_info": switch_info, "port_id": port_id})
+        local_link_information_str=json.dumps({"local_link_information": local_link_information_list})
 
         # create vmi with vpg_uuid, vn_uuid and vlan-id
         tmp_str = '''
@@ -153,8 +176,7 @@ def run_module():
               "key_value_pair": [
                 {"key": "vpg", "value": "%s"},
                 {"key": "vnic_type", "value": "baremetal"},
-                {"key": "vif_type", "value": "vrouter"},
-                {"key": "profile", "value": "{%s}"}
+                {"key": "vif_type", "value": "vrouter"}
               ]
             },
             "virtual_network_refs": [
@@ -163,12 +185,16 @@ def run_module():
              "uuid": "%s"
              }
             ],
-            "sub_inteface_vlan_tag": "%s"
+            "virtual_machine_interface_properties": {
+              "sub_interface_vlan_tag": %s
+            }
           }
         }
-        ''' % (domain, project, "".join ((vpg_name, '-', project, '-', vn_name, '-', str(vlan_id))), vpg_name, r'\"local_link_information\":[{\"fabric\":\"fab1\", \"port_id\":\"xe-0/0/9\", \"switch_info\":\"leaf1\"}]', domain, project, vn_name, vn_uuid, vlan_id)
+        ''' % (domain, project, "".join ((vpg_name, '-', fabric, '-', vn_name, '-', str(vlan_id))), vpg_name, domain, project, vn_name, vn_uuid, vlan_id)
 
         js=json.loads (tmp_str)
+        js["virtual-machine-interface"]["virtual_machine_interface_bindings"]["key_value_pair"].append({"key": "profile", "value": local_link_information_str})
+
 
         response = requests.post(config_api_url + 'virtual-machine-interfaces', data=json.dumps(js), headers=vnc_api_headers)
         if not response.status_code == 200:
@@ -177,7 +203,10 @@ def run_module():
           module.fail_json(msg="vlan / vn assignment failed", **result)
 
       elif state == 'absent':
+        # TODO:
         # check vpg's virtual_machine_interface refs and get attr vlan_tag
+        # annotation or virtual_machine_interface_refs' attr
+        # skip this if already available
         vmi_uuid=''
         for vmi_ref in vpg_vmi_refs:
           if vlan_id == vmi_ref.get("attr").get("sub_inteface_vlan_tag"):
