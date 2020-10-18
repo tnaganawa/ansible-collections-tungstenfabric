@@ -37,6 +37,26 @@ options:
         description:
             - service-instance project
         required: false
+    left_virtual_network:
+        description:
+            - virtual-network of left interface
+        required: true
+    right_virtual_network:
+        description:
+            - virtual-network of left interface
+        required: true
+    service_template:
+        description:
+            - service-template of this service-instance
+        required: true
+    left_interface_uuid:
+        description:
+            - uuid of left virtual-machine-interface
+        required: true
+    right_interface_uuid:
+        description:
+            - uuid of right virtual-machine-interface
+        required: true
 
 author:
     - Tatsuya Naganawa (@tnaganawa)
@@ -49,13 +69,19 @@ EXAMPLES = '''
     name: service-instance1
     controller_ip: x.x.x.x
     state: present
+    project: admin
+    left_virtual_network: vn1
+    right_virtual_network: vn2
+    service_template: l3
+    left_interface_uuid: xxxx-xxxx-xxxx-xxxx
+    right_interface_uuid: yyyy-yyyy-yyyy-yyyy
 
 - name: delete service-instance
   tungstenfabric.service_instance.service_instance:
     name: service-instance1
     controller_ip: x.x.x.x
     state: absent
-
+    project: admin
 '''
 
 RETURN = '''

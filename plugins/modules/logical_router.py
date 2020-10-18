@@ -31,11 +31,19 @@ options:
         required: true
     domain:
         description:
-            - logical-router subnet
+            - logical-router domain
         required: false
     project:
         description:
-            - logical-router subnet
+            - logical-router project
+        required: false
+    router_type:
+        description:
+            - logical-router type (snat-routing / vxlan-routing)
+        required: false
+    connected_networks:
+        description:
+            - virtual-networks connected to this logical-router
         required: false
 
 author:
@@ -49,12 +57,16 @@ EXAMPLES = '''
     name: lr1
     controller_ip: x.x.x.x
     state: present
+    project: admin
+    router_type: vxlan-routing
+    connected_networks: [vn1, vn2]
 
 - name: delete logical-router
   tungstenfabric_logical_router:
     name: lr1
     controller_ip: x.x.x.x
     state: absent
+    project: admin
 
 '''
 

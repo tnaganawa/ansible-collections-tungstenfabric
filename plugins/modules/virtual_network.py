@@ -45,6 +45,26 @@ options:
         description:
             - virtual-network subnet
         required: false
+    forwarding_mode:
+        description:
+            - set forwarding mode (L2_L3, L2, L3)
+        required: false
+    rpf:
+        description:
+            - set rpf (enable or disable)
+        required: false
+    allow_transit:
+        description:
+            - set allow_transit (true or false)
+        required: false
+    vxlan_network_identifier:
+        description:
+            - set vni of this virtual-network
+        required: false
+    network_policy_refs:
+        description:
+            - set network-policy (fq_name of network-policy)
+        required: false
 
 author:
     - Tatsuya Naganawa (@tnaganawa)
@@ -57,12 +77,28 @@ EXAMPLES = '''
     name: vn1
     controller_ip: x.x.x.x
     state: present
+    project: admin
+    subnet: 10.0.1.0
+    subnet_prefix: 24
 
 - name: delete virtual-network
   tungstenfabric_virtual_network:
     name: vn1
     controller_ip: x.x.x.x
     state: absent
+    project: admin
+
+- name: create virtual-network with some parameters
+  tungstenfabric_virtual_network:
+    name: vn1
+    controller_ip: x.x.x.x
+    state: present
+    project: admin
+    subnet: 10.0.1.0
+    subnet_prefix: 24
+    rpf: enable
+    vxlan_network_identifier: 101
+    network_policy_refs: [default-domain:admin:vn1-to-vn2]
 
 '''
 

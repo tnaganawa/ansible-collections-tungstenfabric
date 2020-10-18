@@ -40,6 +40,7 @@ EXAMPLES = '''
   tungstenfabric.global_vrouter_config.global_vrouter_config:
     controller_ip: x.x.x.x
     state: present
+    flow_export_rate: 100
 '''
 
 RETURN = '''

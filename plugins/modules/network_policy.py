@@ -37,6 +37,10 @@ options:
         description:
             - network-policy subnet
         required: false
+    policy_rule:
+        description:
+            - rule of this network-policy (see EXAMPLES)
+        required: false
 
 author:
     - Tatsuya Naganawa (@tnaganawa)
@@ -45,10 +49,18 @@ author:
 EXAMPLES = '''
 # Pass in a message
 - name: create network-policy
-  tungstenfabric.network_policy.network_policy:
+  tungstenfabric.network.network_policy:
     name: network-policy1
     controller_ip: x.x.x.x
     state: present
+    project: admin
+    policy_rule:
+      simple_action: pass
+      src_addresses: 
+        - default-domain:admin:vn1
+      dst_addresses: 
+        - default-domain:admin:vn2
+      protocol: any
 
 - name: delete network-policy
   tungstenfabric.network_policy.network_policy:
@@ -56,6 +68,27 @@ EXAMPLES = '''
     controller_ip: x.x.x.x
     state: absent
 
+- name: create network-policy with network service
+  tungstenfabric.network.network_policy:
+    name: network-policy1
+    controller_ip: x.x.x.x
+    state: present
+    project: admin
+    policy_rule:
+      action_list:
+        simple_action: pass
+        apply_service:
+          - default-domain:admin:vn1-to-vn2
+      src_addresses:
+        - default-domain:admin:vn1
+      dst_addresses:
+        - default-domain:admin:vn2
+      src_ports:
+        - {start_port: -1, end_port: -1}
+      dst_ports:
+        - {start_port: -1, end_port: -1}
+      protocol: any
+      direction: "<>"
 '''
 
 RETURN = '''

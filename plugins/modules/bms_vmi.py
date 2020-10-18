@@ -25,10 +25,6 @@ options:
         description:
             - tungstenfabric controller ip
         required: true
-    vpg_vn_vlan_list:
-        description:
-            - list of vpg / vn / vlan-id tuple
-        required: true
     domain:
         description:
             - domain for this vpg and vmi
@@ -37,6 +33,10 @@ options:
         description:
             - project for this vpg and vmi
         required: false
+    vpg_vn_vlan_list:
+        description:
+            - list of vpg / vn / vlan-id tuple
+        required: true
 
 author:
     - Tatsuya Naganawa (@tnaganawa)
@@ -48,6 +48,7 @@ EXAMPLES = '''
   tungstenfabric.networking.bms_vmi:
     controller_ip: x.x.x.x
     state: present
+    project: admin
     vpg_vn_vlan_list:
      - [virtual-port-group1, vn1, 101]
      - [virtual-port-group1, vn2, 102]
@@ -57,6 +58,7 @@ EXAMPLES = '''
   tungstenfabric.networking.bms_vmi:
     controller_ip: x.x.x.x
     state: absent
+    project: admin
     vpg_vn_vlan_list:
      - [virtual-port-group1, vn1, 101]
      - [virtual-port-group1, vn2, 102]

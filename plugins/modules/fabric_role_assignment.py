@@ -37,6 +37,11 @@ options:
         description:
             - fabric subnet
         required: false
+    dict_device_rol:
+        description:
+            - dictionary for routing / bridging roles of each device
+        required: false
+
 
 author:
     - Tatsuya Naganawa (@tnaganawa)

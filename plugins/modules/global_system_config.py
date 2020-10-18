@@ -41,6 +41,7 @@ EXAMPLES = '''
     name: global-system-config1
     controller_ip: x.x.x.x
     state: present
+    autonomous_system: 65001
 '''
 
 RETURN = '''
