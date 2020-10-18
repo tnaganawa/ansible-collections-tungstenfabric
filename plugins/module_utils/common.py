@@ -49,7 +49,7 @@ def login_and_check_id(name, obj_type, controller_ip, username, password, state,
 # crud (web_api, 'present', result, payload)
 # crud (web_api, 'absent', result, obj_type='virtual-network', uuid='xxxx-xxxx')
 ##
-def crud(web_api, controller_ip, update, state, result, payload='{}', obj_type='', uuid=''):
+def crud(web_api, controller_ip, update, state, result, payload='{}', obj_type='', uuid='', userData={}):
     web_api_url = 'https://' + controller_ip + ':8143/'
     failed=False
 
@@ -59,14 +59,23 @@ def crud(web_api, controller_ip, update, state, result, payload='{}', obj_type='
     if state == "present":
       if update:
         print ("update object")
-        response = web_api.post(web_api_url + 'api/tenants/config/update-config-object', data=payload, headers=vnc_api_headers, verify=False)
+        if obj_type == 'service-instance':
+          response = web_api.put(web_api_url + 'api/tenants/config/service-instances/' + uuid, data=payload, headers=vnc_api_headers, verify=False)
+        else:
+          response = web_api.post(web_api_url + 'api/tenants/config/update-config-object', data=payload, headers=vnc_api_headers, verify=False)
       else:
         print ("create object")
-        response = web_api.post(web_api_url + 'api/tenants/config/create-config-object', data=payload, headers=vnc_api_headers, verify=False)
+        if obj_type == 'service-instance':
+          response = web_api.post(web_api_url + 'api/tenants/config/service-instances', data=payload, headers=vnc_api_headers, verify=False)
+        else:
+          response = web_api.post(web_api_url + 'api/tenants/config/create-config-object', data=payload, headers=vnc_api_headers, verify=False)
     elif (state == "absent"):
       if update:
         print ("delete object {}".format(uuid))
-        response = web_api.post(web_api_url + 'api/tenants/config/delete', data=json.dumps([{"type": obj_type, "deleteIDs": ["{}".format(uuid)]}]), headers=vnc_api_headers, verify=False)
+        delete_data=[{"type": obj_type, "deleteIDs": ["{}".format(uuid)]}]
+        if not userData == {}:
+          delete_data[0]["userData"]=userData
+        response = web_api.post(web_api_url + 'api/tenants/config/delete', data=json.dumps(delete_data), headers=vnc_api_headers, verify=False)
       else:
         result["message"]="delete is requested, but that fq_name is not avaialbe"
         result["changed"]=False

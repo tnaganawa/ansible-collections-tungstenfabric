@@ -66,6 +66,7 @@ message:
 '''
 
 import sys
+import uuid as uuid_module
 import json
 import requests
 from ansible.module_utils.basic import AnsibleModule
@@ -84,6 +85,8 @@ def run_module():
         mgmt_virtual_network=dict(type='str', required=False),
         left_virtual_network=dict(type='str', required=True),
         right_virtual_network=dict(type='str', required=True),
+        left_interface_uuid=dict(type='str', required=False),
+        right_interface_uuid=dict(type='str', required=False),
         service_template=dict(type='str', required=True)
     )
     result = dict(
@@ -106,6 +109,8 @@ def run_module():
     mgmt_virtual_network = module.params.get("mgmt_virtual_network")
     left_virtual_network = module.params.get("left_virtual_network")
     right_virtual_network = module.params.get("right_virtual_network")
+    left_interface_uuid = module.params.get("left_interface_uuid")
+    right_interface_uuid = module.params.get("right_interface_uuid")
     service_template = module.params.get("service_template")
 
     if module.check_mode:
@@ -132,16 +137,52 @@ def run_module():
     )
 
     ## begin: object specific
-    js["service-instance"]["service_instance_properties"] = {"interface_list": [{"virtual_network": left_virtual_network}, {"virtual_network": right_virtual_network}], "left_virtual_network": left_virtual_network, "right_virtual_network": right_virtual_network, "service_template_refs": [{"to": [domain, service_template]}]}
+    config_api_url = 'http://' + controller_ip + ':8082/'
+    vnc_api_headers= {"Content-Type": "application/json", "charset": "UTF-8"}
+
+    failed=False
+    userData={}
+
+    right_virtual_network_fqname=":".join((domain, project, right_virtual_network))
+    left_virtual_network_fqname=":".join((domain, project, left_virtual_network))
+    js["service-instance"]["service_instance_properties"] = {"interface_list": [{"virtual_network": left_virtual_network_fqname}, {"virtual_network": right_virtual_network_fqname}], "left_virtual_network": left_virtual_network_fqname, "right_virtual_network": right_virtual_network_fqname}
+    js["service-instance"]["service_template_refs"]=[{"to": [domain, service_template]}]
+
     if mgmt_virtual_network:
       js["service-instance"]["service_instance_properties"]["interface_list"].append({"virtual_network": mgmt_virtual_network})
+
+    if not update and left_interface_uuid:
+      js["service-instance"]["port_tuples"]=[{"to": [domain, project, name, "port-tuple-{}".format(uuid_module.uuid4())], "vmis": [{"fq_name": [domain, project, left_interface_uuid], "interfaceType": "left", "uuid": left_interface_uuid}, {"fq_name": [domain, project, right_interface_uuid], "interfaceType": "right", "uuid": right_interface_uuid}]}]
+
+    if state == 'absent':
+      response = requests.get (config_api_url + 'service-instance/' + uuid, headers=vnc_api_headers)
+      if not response.status_code == 200:
+        failed = True
+        result["message"] = response.text
+        module.fail_json(msg="cannot obtain service-instance object detail", **result)
+      port_tuples = json.loads(response.text).get("service-instance").get("port_tuples")
+      # get vmi uuids
+      for i in range(len(port_tuples)):
+        port_tuple_uuid = port_tuples[i].get("uuid")
+        response = requests.get (config_api_url + 'port-tuple/' + port_tuple_uuid, headers=vnc_api_headers)
+        if not response.status_code == 200:
+          failed = True
+          result["message"] = response.text
+          module.fail_json(msg="cannot obtain port-tuple object detail", **result)
+        vmi_back_refs = json.loads(response.text).get("port-tuple").get("virtual_machine_interface_back_refs")
+        vmis = []
+        for vmi_back_ref in vmi_back_refs:
+          vmis.append({"uuid": vmi_back_ref.get("uuid")})
+        port_tuples[i]["vmis"] = vmis
+
+      userData = {"port_tuples": port_tuples}
 
     ## end: object specific
 
 
     payload=json.dumps(js)
 
-    failed = crud (web_api, controller_ip, update, state, result, payload=payload, obj_type=obj_type, uuid=uuid)
+    failed = crud (web_api, controller_ip, update, state, result, payload=payload, obj_type=obj_type, uuid=uuid, userData = userData)
 
 
     if failed:

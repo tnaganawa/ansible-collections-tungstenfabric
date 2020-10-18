@@ -74,6 +74,7 @@ message:
 '''
 
 import sys
+import uuid as uuid_module
 import json
 import requests
 from ansible.module_utils.basic import AnsibleModule
@@ -174,11 +175,15 @@ def run_module():
       )
 
     if subnet:
-      js ["virtual-network"]["network_ipam_refs"]=[
-        {"to": ["default-domain", "default-project", "default-network-ipam"],
-        "attr": {"ipam_subnets": [{"subnet": {"ip_prefix": subnet, "ip_prefix_len": subnet_prefix}}]}
-        }
-      ]
+      if (js["virtual-network"].get("network_ipam_refs")==None):
+        js ["virtual-network"]["network_ipam_refs"]=[
+          {"to": ["default-domain", "default-project", "default-network-ipam"],
+          "attr": {"ipam_subnets": [{"subnet": {"ip_prefix": subnet, "ip_prefix_len": subnet_prefix}}]}
+          }
+        ]
+        subnet_uuid=str(uuid_module.uuid4())
+        js ["virtual-network"]["network_ipam_refs"][0]["attr"]["ipam_subnets"][0]["subnet_uuid"]=subnet_uuid
+        js ["virtual-network"]["network_ipam_refs"][0]["attr"]["ipam_subnets"][0]["subnet_name"]=subnet_uuid
     if flood_unknown_unicast:
       js ["virtual-network"]["flood_unknown_unicast"]=True
     if ip_fabric_forwarding:
@@ -193,7 +198,7 @@ def run_module():
         if not response.status_code == 200:
           module.fail_json(msg="network-policy specified doesn't exist", **result)
         np_uuid = json.loads(response.text).get("uuid")
-        network_policy_refs_list.append ({"to": np_fqname.split(":"), "uuid": np_uuid})
+        network_policy_refs_list.append ({"to": np_fqname.split(":"), "uuid": np_uuid, "attr": {"sequence": {"major": 0, "minor": 0}}})
 
       js ["virtual-network"]["network_policy_refs"]=network_policy_refs_list
 
