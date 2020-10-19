@@ -55,12 +55,13 @@ EXAMPLES = '''
     state: present
     project: admin
     policy_rule:
-      simple_action: pass
-      src_addresses: 
-        - default-domain:admin:vn1
-      dst_addresses: 
-        - default-domain:admin:vn2
-      protocol: any
+      - src_addresses:
+          - default-domain:admin:vn1
+        dst_addresses:
+          - default-domain:admin:vn2
+        protocol: any
+        action_list:
+          simple_action: pass
 
 - name: delete network-policy
   tungstenfabric.network_policy.network_policy:
@@ -75,20 +76,15 @@ EXAMPLES = '''
     state: present
     project: admin
     policy_rule:
-      action_list:
-        simple_action: pass
-        apply_service:
-          - default-domain:admin:vn1-to-vn2
-      src_addresses:
-        - default-domain:admin:vn1
-      dst_addresses:
-        - default-domain:admin:vn2
-      src_ports:
-        - {start_port: -1, end_port: -1}
-      dst_ports:
-        - {start_port: -1, end_port: -1}
-      protocol: any
-      direction: "<>"
+      - src_addresses:
+          - default-domain:admin:vn1
+        dst_addresses:
+          - default-domain:admin:vn2
+        protocol: any
+        action_list:
+          simple_action: pass
+          apply_service:
+            - default-domain:admin:vn1-to-vn2
 '''
 
 RETURN = '''
@@ -160,7 +156,18 @@ def run_module():
 
     ## begin: object specific
     if (policy_rule):
-      js["network-policy"]["network_policy_entries"] = {"policy_rule": policy_rule}
+      tmp_policy_rule = policy_rule[:]
+
+      for i in range(len(tmp_policy_rule)):
+        # set default values for policy rules
+        if tmp_policy_rule[i].get("direction") == None:
+          tmp_policy_rule[i]["direction"]="<>"
+        if tmp_policy_rule[i].get("src_ports") == None:
+          tmp_policy_rule[i]["src_ports"]=[{"start_port": -1, "end_port": -1}]
+        if tmp_policy_rule[i].get("dst_ports") == None:
+          tmp_policy_rule[i]["dst_ports"]=[{"start_port": -1, "end_port": -1}]
+
+      js["network-policy"]["network_policy_entries"] = {"policy_rule": tmp_policy_rule}
 
     ## end: object specific
 
