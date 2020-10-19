@@ -22,6 +22,8 @@ def login_and_check_id(name, obj_type, controller_ip, username, password, state,
       response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "%s", "fq_name": ["default-global-system-config", "%s"]}' % (obj_type, fabric), headers=vnc_api_headers)
     elif (obj_type in ['virtual-port-group']):
       response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "%s", "fq_name": ["default-global-system-config", "%s", "%s"]}' % (obj_type, fabric, name), headers=vnc_api_headers)
+    elif (obj_type in ['service-template']):
+      response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "%s", "fq_name": ["%s", "%s"]}' % (obj_type, domain, name), headers=vnc_api_headers)
     else:
       response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "%s", "fq_name": ["%s", "%s", "%s"]}' % (obj_type, domain, project, name), headers=vnc_api_headers)
     if response.status_code == 200:
