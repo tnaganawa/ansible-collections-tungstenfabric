@@ -61,6 +61,18 @@ options:
         description:
             - set vni of this virtual-network
         required: false
+    route_target_list:
+        description:
+            - list of route-target
+        required: false
+    import_route_target_list:
+        description:
+            - list of import route-target
+        required: false
+    export_route_target_list:
+        description:
+            - list of export route-target
+        required: false
     network_policy_refs:
         description:
             - set network-policy (fq_name of network-policy)
@@ -98,6 +110,7 @@ EXAMPLES = '''
     subnet_prefix: 24
     rpf: enable
     vxlan_network_identifier: 101
+    route_target_list: [target:64512:101, target:65501:101]
     network_policy_refs: [default-domain:admin:vn1-to-vn2]
 
 '''
@@ -123,6 +136,7 @@ def run_module():
         username=dict(type='str', required=False, default='admin'),
         password=dict(type='str', required=False, default='contrail123'),
         state=dict(type='str', required=False, default='present', choices=['absent', 'present']),
+        global_object=dict(type='bool', required=False),
         uuid=dict(type='str', required=False),
         domain=dict(type='str', required=False, default='default-domain'),
         project=dict(type='str', required=False, default='default-project'),
@@ -140,6 +154,9 @@ def run_module():
         max_flows=dict(type='int', required=False),
         rpf=dict(type='str', required=False, choices=['enable', 'disable']),
         vxlan_network_identifier=dict(type='int', required=False),
+        route_target_list=dict(type='list', required=False),
+        import_route_target_list=dict(type='list', required=False),
+        export_route_target_list=dict(type='list', required=False),
         network_policy_refs=dict(type='list', required=False)
     )
     result = dict(
@@ -147,9 +164,14 @@ def run_module():
         message=''
     )
 
+    required_if_args = [
+      ["global_object", True, ["domain", "project", "name", "route_target_list", "vxlan_network_identifier"]]
+    ]
+
     module = AnsibleModule(
         argument_spec=module_args,
-        supports_check_mode=True
+        supports_check_mode=True,
+        required_if=required_if_args
     )
 
     name = module.params.get("name")
@@ -168,6 +190,9 @@ def run_module():
     allow_transit = module.params.get("allow_transit")
     forwarding_mode = module.params.get("forwarding_mode")
     vxlan_network_identifier = module.params.get("vxlan_network_identifier")
+    route_target_list = module.params.get("route_target_list")
+    import_route_target_list = module.params.get("import_route_target_list")
+    export_route_target_list = module.params.get("export_route_target_list")
     network_policy_refs = module.params.get("network_policy_refs")
 
     if module.check_mode:
@@ -248,6 +273,12 @@ def run_module():
       js ["virtual-network"]["virtual_network_properties"]["forwarding_mode"]=forwarding_mode
     if vxlan_network_identifier:
       js ["virtual-network"]["virtual_network_properties"]["vxlan_network_identifier"]=vxlan_network_identifier
+    if route_target_list:
+      js ["virtual-network"]["route_target_list"]={"route_target": route_target_list}
+    if import_route_target_list:
+      js ["virtual-network"]["import_route_target_list"]={"route_target": import_route_target_list}
+    if export_route_target_list:
+      js ["virtual-network"]["export_route_target_list"]={"route_target": export_route_target_list}
 
 
     if state == "present":
