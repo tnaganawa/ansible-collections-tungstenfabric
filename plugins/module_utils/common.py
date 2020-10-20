@@ -8,13 +8,21 @@ import os
 import json
 import requests
 
+# begin: variables
 vnc_api_headers= {"Content-Type": "application/json", "charset": "UTF-8"}
 web_api_headers= {"Content-Type": "application/json", "charset": "UTF-8"}
+config_api_url=""
+web_api_url=""
+module=None
+controller_ip=""
+# end: variables
 
 
 def login_and_check_id(module, name, obj_type, controller_ip, username, password, state, domain='default-domain', project='default-project', fabric='dummy'):
+    controller_ip = controller_ip
     config_api_url = 'http://' + controller_ip + ':8082/'
     web_api_url = 'https://' + controller_ip + ':8143/'
+    module=module
 
     ##
     # get keystone token
@@ -38,6 +46,8 @@ def login_and_check_id(module, name, obj_type, controller_ip, username, password
     ## check if the fqname exists
     if (obj_type in ['global-system-config']):
       response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "%s", "fq_name": ["default-global-system-config"]}' % (obj_type), headers=vnc_api_headers)
+    elif (obj_type in ['virtual-machine']):
+      response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "%s", "fq_name": ["%s"]}' % (obj_type, name), headers=vnc_api_headers)
     elif (obj_type in ['global-vrouter-config']):
       response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "%s", "fq_name": ["default-global-system-config", "default-global-vrouter-config"]}' % (obj_type), headers=vnc_api_headers)
     elif (obj_type in ['fabric']):
@@ -120,3 +130,12 @@ def crud(web_api, controller_ip, update, state, result, payload='{}', obj_type='
 
     return failed
 
+
+def fqname_to_id (module, fqname, obj_type, controller_ip):
+  #config_api_url = 'http://' + controller_ip + ':8082/'
+
+  response = requests.post(config_api_url + 'fqname-to-id', data=json.dumps({"type": obj_type, "fq_name": fqname.split(":")}), headers=vnc_api_headers)
+  if not response.status_code == 200:
+    module.fail_json(msg="{} specified doesn't exist".fqname, **result)
+  uuid = json.loads(response.text).get("uuid")
+  return uuid

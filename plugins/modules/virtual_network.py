@@ -157,7 +157,8 @@ def run_module():
         route_target_list=dict(type='list', required=False),
         import_route_target_list=dict(type='list', required=False),
         export_route_target_list=dict(type='list', required=False),
-        network_policy_refs=dict(type='list', required=False)
+        network_policy_refs=dict(type='list', required=False),
+        tag_refs=dict(type='list', required=False)
     )
     result = dict(
         changed=False,
@@ -244,8 +245,16 @@ def run_module():
           module.fail_json(msg="network-policy specified doesn't exist", **result)
         np_uuid = json.loads(response.text).get("uuid")
         network_policy_refs_list.append ({"to": np_fqname.split(":"), "uuid": np_uuid, "attr": {"sequence": {"major": 0, "minor": 0}}})
-
       js ["virtual-network"]["network_policy_refs"]=network_policy_refs_list
+
+    if tag_refs:
+      # ["default-domain:admin:site=A"], []]
+      tag_refs_list=[]
+      for tag_fqname in tag_refs:
+        tag_uuid = fqname_to_id (module, tag_fqname, 'tag', controller_ip)
+        tag_refs_list.append ({"to": tag_fqname.split(":"), "uuid": tag_uuid })
+      js ["virtual-network"]["tag_refs"]=network_policy_refs_list
+
 
     if js["virtual-network"].get("virtual_network_properties")==None:
       js ["virtual-network"]["virtual_network_properties"]={}
