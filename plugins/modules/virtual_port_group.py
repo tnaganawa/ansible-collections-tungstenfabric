@@ -117,7 +117,7 @@ def run_module():
 
     obj_type='virtual-port-group'
 
-    (web_api, update, uuid, js) = login_and_check_id(name, obj_type, controller_ip, username, password, state, domain=domain, project=project, fabric=fabric)
+    (web_api, update, uuid, js) = login_and_check_id(module, name, obj_type, controller_ip, username, password, state, domain=domain, project=project, fabric=fabric)
 
     ## begin: object specific
     config_api_url = 'http://' + controller_ip + ':8082/'

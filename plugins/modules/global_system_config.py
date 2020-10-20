@@ -89,7 +89,7 @@ def run_module():
 
     obj_type='global-system-config'
 
-    (web_api, update, uuid, js) = login_and_check_id(name, obj_type, controller_ip, username, password, state)
+    (web_api, update, uuid, js) = login_and_check_id(module, name, obj_type, controller_ip, username, password, state)
 
     ## begin: object specific
     old_js = js

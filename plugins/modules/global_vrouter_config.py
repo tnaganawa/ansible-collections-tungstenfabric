@@ -88,7 +88,7 @@ def run_module():
 
     obj_type='global-vrouter-config'
 
-    (web_api, update, uuid, js) = login_and_check_id(name, obj_type, controller_ip, username, password, state)
+    (web_api, update, uuid, js) = login_and_check_id(module, name, obj_type, controller_ip, username, password, state)
 
     if flow_export_rate:
       js ["global-vrouter-config"]["flow_export_rate"]=flow_export_rate

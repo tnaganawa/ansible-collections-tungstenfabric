@@ -144,7 +144,7 @@ def run_module():
 
     obj_type='service-instance'
 
-    (web_api, update, uuid, js) = login_and_check_id(name, obj_type, controller_ip, username, password, state, domain=domain, project=project)
+    (web_api, update, uuid, js) = login_and_check_id(module, name, obj_type, controller_ip, username, password, state, domain=domain, project=project)
 
 
     if update and state=='present':
