@@ -129,6 +129,9 @@ def run_module():
         uuid=dict(type='str', required=False),
         domain=dict(type='str', required=False, default='default-domain'),
         project=dict(type='str', required=False, default='default-project'),
+        bgpaas_ip_address=dict(type='str', required=False),
+        hold_time=dict(type='int', required=False),
+        virtual_machine_interface_refs=dict(type='str', required=False)
     )
     result = dict(
         changed=False,
@@ -147,6 +150,9 @@ def run_module():
     state = module.params.get("state")
     domain = module.params.get("domain")
     project = module.params.get("project")
+    bgpaas_ip_address = module.params.get("bgpaas_ip_address")
+    hold_time = module.params.get("hold_time")
+    virtual_machine_interface_refs = module.params.get("virtual_machine_interface_refs")
 
     if module.check_mode:
         module.exit_json(**result)
@@ -172,7 +178,13 @@ def run_module():
     )
 
     ## begin: object specific
+    if bgpaas_ip_address:
+      js ["bgp-as-a-service"]["bgpaas_ip_address"]=bgpaas_ip_address
 
+    if not js ["bgp-as-a-service"]["bgpaas_session_attributes"]:
+      js ["bgp-as-a-service"]["bgpaas_session_attributes"]={}
+      if hold_time:
+        js ["bgp-as-a-service"]["bgpaas_session_attributes"]["hold_time"]=hold_time
     ## end: object specific
 
 
