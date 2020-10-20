@@ -120,37 +120,24 @@ def run_module():
         module.exit_json(**result)
 
     ## begin: logical-router
-    config_api_url = 'http://' + controller_ip + ':8082/'
-    web_api_url = 'https://' + controller_ip + ':8143/'
-    vnc_api_headers= {"Content-Type": "application/json", "charset": "UTF-8"}
-    failed = False
+    obj_type='logical-router'
 
-    ## check if the fqname exists
-    response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "logical_router", "fq_name": ["%s", "%s", "%s"]}' % (domain, project, name), headers=vnc_api_headers)
-    if response.status_code == 200:
-      update = True
-      uuid = json.loads(response.text).get("uuid")
-    else:
-      update = False
-
-    ## login to web API
-    client = requests.session()
-    response = client.post(web_api_url + 'authenticate', data=json.dumps({"username": username, "password": password}), headers=vnc_api_headers, verify=False)
-    print (client.cookies)
-    csrftoken=client.cookies['_csrf']
-    vnc_api_headers["x-csrf-token"]=csrftoken
+    (web_api, update, uuid, js) = login_and_check_id(module, name, obj_type, controller_ip, username, password, state, domain=domain, project=project)
 
     ## create payload and call API
-    js=json.loads (
-    '''
-    { "logical-router":
-      {
-        "fq_name": ["%s", "%s", "%s"],
-        "parent_type": "project"
+    if update and state=='present':
+      pass
+    else:
+      js=json.loads (
+      '''
+      { "logical-router":
+        {
+          "fq_name": ["%s", "%s", "%s"],
+          "parent_type": "project"
+        }
       }
-    }
-    ''' % (domain, project, name)
-    )
+      ''' % (domain, project, name)
+      )
 
     if router_type:
       js ["logical-router"]["logical_router_type"]=router_type

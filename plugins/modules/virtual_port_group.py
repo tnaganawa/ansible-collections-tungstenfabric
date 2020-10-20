@@ -78,7 +78,7 @@ import sys
 import json
 import requests
 from ansible.module_utils.basic import AnsibleModule
-from ansible_collections.tungstenfabric.networking.plugins.module_utils.common import login_and_check_id, crud
+from ansible_collections.tungstenfabric.networking.plugins.module_utils.common import login_and_check_id, crud, vnc_api_headers
 
 def run_module():
     module_args = dict(
@@ -121,7 +121,6 @@ def run_module():
 
     ## begin: object specific
     config_api_url = 'http://' + controller_ip + ':8082/'
-    vnc_api_headers= {"Content-Type": "application/json", "charset": "UTF-8"}
 
     failed=False
 

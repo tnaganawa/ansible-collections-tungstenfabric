@@ -138,7 +138,6 @@ def run_module():
 
     (web_api, update, uuid, js) = login_and_check_id(module, name, obj_type, controller_ip, username, password, state, domain=domain, project=project)
 
-
     if update and state=='present':
       pass
     else:
