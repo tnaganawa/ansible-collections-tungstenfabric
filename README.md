@@ -11,11 +11,11 @@ source venv/bin/activate
 pip install ansible requests
 
 
+ansible-galaxy collection install git+https://github.com/tnaganawa/ansible-collections-tungstenfabric.git
+ or
 git clone https://github.com/tnaganawa/ansible-collections-tungstenfabric.git
 mkdir -p ~/.ansible/collections/ansible_collections/tungstenfabric/networking/
 mv -i ansible-collections-tungstenfabric/plugins/ ~/.ansible/collections/ansible_collections/tungstenfabric/networking/
- or
-ansible-galaxy collection install git+https://github.com/tnaganawa/ansible-collections-tungstenfabric.git
 ```
 
  - For ansible collentions to work, ansible 2.9 or later is required.
@@ -65,3 +65,13 @@ ansible -m tungstenfabric.networking.virtual_network localhost -a 'name=vn1 cont
 # ansible-playbook -i localhost virtual-port-group.yaml
 # ansible-playbook -i localhost bms_vmi.yaml
 ```
+
+
+### When keystone is used
+
+This playbook will use environment variables for keystone access, such as OS_AUTH_URL.
+
+```
+# source /etc/kolla/kolla_toolbox/admin-openrc.sh
+```
+
