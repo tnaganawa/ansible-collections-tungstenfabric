@@ -120,6 +120,12 @@ def run_module():
 
     failed=False
 
+    obj_type='virtual-port-group'
+
+    # for keystone login
+    (web_api, update, uuid, js) = login_and_check_id(module, name, obj_type, controller_ip, username, password, state, domain=domain, project=project, fabric=fabric)
+
+
     for vpg_name, vn_name, vlan_id in vpg_vn_vlan_list:
 
       ## check if the vpg exists
@@ -197,8 +203,20 @@ def run_module():
         js["virtual-machine-interface"]["virtual_machine_interface_bindings"]["key_value_pair"].append({"key": "profile", "value": local_link_information_str})
 
 
+        # TODO:
+        # check vpg's virtual_machine_interface refs and get attr vlan_tag
+        # annotation or virtual_machine_interface_refs' attr
+        # skip this if already available
+
         response = requests.post(config_api_url + 'virtual-machine-interfaces', data=json.dumps(js), headers=vnc_api_headers)
-        if not response.status_code == 200:
+        if response.status_code == 200:
+          pass
+        elif response.status_code == 409:
+          # something occurred for this vmi .., set it failed, and continue
+          failed = True
+          result["message"] += response.text + '\n'
+          continue
+        else:
           failed = True
           result["message"] = response.text
           module.fail_json(msg="vlan / vn assignment failed", **result)

@@ -80,7 +80,13 @@ def run_module():
         state=dict(type='str', required=False, default='present', choices=['absent', 'present']),
         uuid=dict(type='str', required=False),
         domain=dict(type='str', required=False, default='default-domain'),
-        project=dict(type='str', required=False, default='default-project')
+        project=dict(type='str', required=False, default='default-project'),
+        health_check_type=dict(type='str', required=False, default='link-local', choices=['link-local', 'end-to-end']),
+        monitor_type=dict(type='str', required=False, default='PING', choices=['PING', 'HTTP', 'BFD']),
+        url_path=dict(type='str', required=False, default='local-ip'),
+        max_retries=dict(type=int, required=False, default=2),
+        timeout=dict(type=int, required=False, default=5),
+        delay=dict(type=int, required=False, default=3)
     )
     result = dict(
         changed=False,
@@ -99,6 +105,12 @@ def run_module():
     state = module.params.get("state")
     domain = module.params.get("domain")
     project = module.params.get("project")
+    health_check_type = module.params.get("health_check_type")
+    monitor_type = module.params.get("monitor_type")
+    url_path = module.params.get("url_path")
+    max_retries = module.params.get("max_retries")
+    timeout = module.params.get("timeout")
+    delay = module.params.get("delay")
 
     if module.check_mode:
         module.exit_json(**result)
@@ -123,6 +135,18 @@ def run_module():
     )
 
     ## begin: object specific
+    if state == 'present':
+      service_health_check_properties = js.get("service-health-check").get("service_health_check_properties")
+      if service_health_check_properties == None:
+        service_health_check_properties={}
+      service_health_check_properties["health_check_type"]=health_check_type
+      service_health_check_properties["monitor_type"]=monitor_type
+      service_health_check_properties["url_path"]=url_path
+      service_health_check_properties["max_retries"]=max_retries
+      service_health_check_properties["timeout"]=timeout
+      service_health_check_properties["delay"]=delay
+      js["service-health-check"]["service_health_check_properties"] = service_health_check_properties
+
     ## end: object specific
 
 

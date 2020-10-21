@@ -11,12 +11,15 @@ import requests
 # begin: variables
 vnc_api_headers= {"Content-Type": "application/json", "charset": "UTF-8"}
 web_api_headers= {"Content-Type": "application/json", "charset": "UTF-8"}
-config_api_url=""
-web_api_url=""
+#config_api_url=""
+#web_api_url=""
 module=None
-controller_ip=""
+#controller_ip=""
 # end: variables
 
+
+def get_config_api_url():
+    return config_api_url
 
 def login_and_check_id(module, name, obj_type, controller_ip, username, password, state, domain='default-domain', project='default-project', fabric='dummy'):
     controller_ip = controller_ip

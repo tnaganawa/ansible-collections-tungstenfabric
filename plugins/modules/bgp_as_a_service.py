@@ -130,7 +130,9 @@ def run_module():
         domain=dict(type='str', required=False, default='default-domain'),
         project=dict(type='str', required=False, default='default-project'),
         bgpaas_ip_address=dict(type='str', required=False),
-        hold_time=dict(type='int', required=False),
+        hold_time=dict(type='int', required=False, default=90),
+        address_families=dict(type='list', required=False, default=['inet']),
+        autonomous_system=dict(type='int', required=True),
         virtual_machine_interface_refs=dict(type='str', required=False)
     )
     result = dict(
@@ -150,6 +152,8 @@ def run_module():
     state = module.params.get("state")
     domain = module.params.get("domain")
     project = module.params.get("project")
+    address_families = module.params.get("address_families")
+    autonomous_system = module.params.get("autonomous_system")
     bgpaas_ip_address = module.params.get("bgpaas_ip_address")
     hold_time = module.params.get("hold_time")
     virtual_machine_interface_refs = module.params.get("virtual_machine_interface_refs")
@@ -178,11 +182,15 @@ def run_module():
     )
 
     ## begin: object specific
+    if autonomous_system:
+      js ["bgp-as-a-service"]["autonomous_system"]=autonomous_system
     if bgpaas_ip_address:
       js ["bgp-as-a-service"]["bgpaas_ip_address"]=bgpaas_ip_address
 
-    if not js ["bgp-as-a-service"]["bgpaas_session_attributes"]:
+    if js ["bgp-as-a-service"].get("bgpaas_session_attributes") == None:
       js ["bgp-as-a-service"]["bgpaas_session_attributes"]={}
+      if address_families:
+        js ["bgp-as-a-service"]["bgpaas_session_attributes"]["address_families"]={"family": address_families}
       if hold_time:
         js ["bgp-as-a-service"]["bgpaas_session_attributes"]["hold_time"]=hold_time
     ## end: object specific

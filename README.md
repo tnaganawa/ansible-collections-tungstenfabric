@@ -38,6 +38,7 @@ ansible -m tungstenfabric.networking.virtual_network localhost -a 'name=vn1 cont
 # cat virtual-port-group.yaml
 - name: create vpg
   hosts: localhost
+  gather_facts: false
   tasks:
   - name: create vpg
     tungstenfabric.networking.virtual_port_group:
@@ -52,6 +53,7 @@ ansible -m tungstenfabric.networking.virtual_network localhost -a 'name=vn1 cont
 # cat bms_vmi.yaml
 - name: add vn vlan pair
   hosts: localhost
+  gather_facts: false
   tasks:
   - name: add vn vlan pair
     tungstenfabric.networking.bms_vmi:
@@ -72,6 +74,6 @@ ansible -m tungstenfabric.networking.virtual_network localhost -a 'name=vn1 cont
 This playbook will use environment variables for keystone access, such as OS_AUTH_URL.
 
 ```
-# source /etc/kolla/kolla_toolbox/admin-openrc.sh
+# source /etc/kolla/kolla-toolbox/admin-openrc.sh
 ```
 

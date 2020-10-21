@@ -127,7 +127,7 @@ import uuid as uuid_module
 import json
 import requests
 from ansible.module_utils.basic import AnsibleModule
-import ansible_collections.tungstenfabric.networking.plugins.module_utils.common
+from ansible_collections.tungstenfabric.networking.plugins.module_utils.common import login_and_check_id, crud, vnc_api_headers
 
 def run_module():
     module_args = dict(
@@ -195,11 +195,13 @@ def run_module():
     import_route_target_list = module.params.get("import_route_target_list")
     export_route_target_list = module.params.get("export_route_target_list")
     network_policy_refs = module.params.get("network_policy_refs")
+    tag_refs = module.params.get("tag_refs")
 
     if module.check_mode:
         module.exit_json(**result)
 
     ## begin: virtual-network
+    config_api_url = 'http://' + controller_ip + ':8082/'
 
     obj_type='virtual-network'
 
@@ -236,7 +238,7 @@ def run_module():
       js ["virtual-network"]["ip_fabric_forwarding"]=True
     if fabric_snat:
       js ["virtual-network"]["fabric_snat"]=True
-    if network_policy_refs:
+    if not network_policy_refs == None:
       # ["default-domain:admin:network-policy1"], []]
       network_policy_refs_list=[]
       for np_fqname in network_policy_refs:
@@ -247,13 +249,13 @@ def run_module():
         network_policy_refs_list.append ({"to": np_fqname.split(":"), "uuid": np_uuid, "attr": {"sequence": {"major": 0, "minor": 0}}})
       js ["virtual-network"]["network_policy_refs"]=network_policy_refs_list
 
-    if tag_refs:
+    if not tag_refs == None:
       # ["default-domain:admin:site=A"], []]
       tag_refs_list=[]
       for tag_fqname in tag_refs:
         tag_uuid = fqname_to_id (module, tag_fqname, 'tag', controller_ip)
         tag_refs_list.append ({"to": tag_fqname.split(":"), "uuid": tag_uuid })
-      js ["virtual-network"]["tag_refs"]=network_policy_refs_list
+      js ["virtual-network"]["tag_refs"]=tag_refs_list
 
 
     if js["virtual-network"].get("virtual_network_properties")==None:
@@ -273,32 +275,12 @@ def run_module():
     if export_route_target_list:
       js ["virtual-network"]["export_route_target_list"]={"route_target": export_route_target_list}
 
-
-    if state == "present":
-      if update:
-        print ("update object")
-        js["virtual-network"]["uuid"]=uuid
-        response = client.post(web_api_url + 'api/tenants/config/update-config-object', data=json.dumps(js), headers=vnc_api_headers, verify=False)
-      else:
-        print ("create object")
-        response = client.post(web_api_url + 'api/tenants/config/create-config-object', data=json.dumps(js), headers=vnc_api_headers, verify=False)
-    elif (state == "absent"):
-      if update:
-        print ("delete object {}".format(uuid))
-        response = client.post(web_api_url + 'api/tenants/config/delete', data=json.dumps([{"type": "virtual-network", "deleteIDs": ["{}".format(uuid)]}]), headers=vnc_api_headers, verify=False)
-      else:
-        failed = True
-    message = response.text
-
-    if response.status_code == 200:
-      result['changed'] = True
-    else:
-      result['changed'] = False
-      failed = True
-
-    result['message'] = message
-
     ## end: virtual-network
+
+
+    payload=json.dumps(js)
+
+    failed = crud (web_api, controller_ip, update, state, result, payload=payload, obj_type=obj_type, uuid=uuid)
 
     if failed:
         module.fail_json(msg='failure message', **result)

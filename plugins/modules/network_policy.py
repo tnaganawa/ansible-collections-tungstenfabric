@@ -49,16 +49,16 @@ author:
 EXAMPLES = '''
 # Pass in a message
 - name: create network-policy
-  tungstenfabric.network.network_policy:
+  tungstenfabric.networking.network_policy:
     name: network-policy1
     controller_ip: x.x.x.x
     state: present
     project: admin
     policy_rule:
       - src_addresses:
-          - default-domain:admin:vn1
+          - virtual_network: default-domain:admin:vn1
         dst_addresses:
-          - default-domain:admin:vn2
+          - virtual_network: default-domain:admin:vn2
         protocol: any
         action_list:
           simple_action: pass
@@ -77,9 +77,9 @@ EXAMPLES = '''
     project: admin
     policy_rule:
       - src_addresses:
-          - default-domain:admin:vn1
+          - virtual_network: default-domain:admin:vn1
         dst_addresses:
-          - default-domain:admin:vn2
+          - virtual_network: default-domain:admin:vn2
         protocol: any
         action_list:
           simple_action: pass

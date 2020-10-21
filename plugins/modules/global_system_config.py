@@ -38,9 +38,7 @@ EXAMPLES = '''
 # Pass in a message
 - name: update global-system-config
   tungstenfabric.global_system_config.global_system_config:
-    name: global-system-config1
     controller_ip: x.x.x.x
-    state: present
     autonomous_system: 65001
 '''
 
@@ -64,7 +62,6 @@ def run_module():
         username=dict(type='str', required=False, default='admin'),
         password=dict(type='str', required=False, default='contrail123'),
         state=dict(type='str', required=False, default='present', choices=['present']),
-        uuid=dict(type='str', required=False),
         autonomous_system=dict(type='int', required=False),
     )
     result = dict(

@@ -81,7 +81,8 @@ import sys
 import json
 import requests
 from ansible.module_utils.basic import AnsibleModule
-import ansible_collections.tungstenfabric.networking.plugins.module_utils.common
+from ansible_collections.tungstenfabric.networking.plugins.module_utils.common import login_and_check_id, crud, vnc_api_headers
+
 
 def run_module():
     module_args = dict(
@@ -143,7 +144,7 @@ def run_module():
       js ["logical-router"]["logical_router_type"]=router_type
 
     print ("connected_networks", connected_networks)
-    if len(connected_networks) > 0:
+    if not connected_networks == None:
       print ("try to connect", connected_networks)
       js ["logical-router"]["virtual_machine_interface_refs"]=[]
       for network in connected_networks:
@@ -156,32 +157,10 @@ def run_module():
          }
         )
 
-
-    if state == "present":
-      if update:
-        print ("update object")
-        js["logical-router"]["uuid"]=uuid
-        response = client.post(web_api_url + 'api/tenants/config/update-config-object', data=json.dumps(js), headers=vnc_api_headers, verify=False)
-      else:
-        print ("create object")
-        response = client.post(web_api_url + 'api/tenants/config/create-config-object', data=json.dumps(js), headers=vnc_api_headers, verify=False)
-    elif (state == "absent"):
-      if update:
-        print ("delete object {}".format(uuid))
-        response = client.post(web_api_url + 'api/tenants/config/delete', data=json.dumps([{"type": "logical-router", "deleteIDs": ["{}".format(uuid)]}]), headers=vnc_api_headers, verify=False)
-      else:
-        failed = True
-    message = response.text
-
-    if response.status_code == 200:
-      result['changed'] = True
-    else:
-      result['changed'] = False
-      failed = True
-
-    result['message'] = message
-
     ## end: logical-router
+    payload=json.dumps(js)
+
+    failed = crud (web_api, controller_ip, update, state, result, payload=payload, obj_type=obj_type, uuid=uuid)
 
     if failed:
         module.fail_json(msg='failure message', **result)
