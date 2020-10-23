@@ -37,7 +37,7 @@ options:
         description:
             - fabric subnet
         required: false
-    dict_device_rol:
+    dict_device_role:
         description:
             - dictionary for routing / bridging roles of each device
         required: false
@@ -56,16 +56,16 @@ EXAMPLES = '''
     dict_device_role:
       spine1: 
         - spine
-        - CRB-Gateway, Route-Reflector
+        - [CRB-Gateway, Route-Reflector]
       spine2: 
         - spine
-        - CRB-Gateway, Route-Reflector
+        - [CRB-Gateway, Route-Reflector]
       leaf1: 
         - leaf
-        - CRB-Access
+        - [CRB-Access]
       leaf2: 
         - leaf
-        - CRB-Access
+        - [CRB-Access]
 '''
 
 RETURN = '''
@@ -125,13 +125,14 @@ def run_module():
     config_api_url = 'http://' + controller_ip + ':8082/'
     if update:
         role_assignment_list=[]
-        for device, role in dict_device_role:
-          role_assignment_list.append ({"device_fq_name": device, "physical_role": role[0], "routing_bridging_roles": role[1]})
+        for device_name in dict_device_role:
+          role = dict_device_role[device_name]
+          role_assignment_list.append ({"device_fq_name": ["default-global-system-config", device_name], "physical_role": role[0], "routing_bridging_roles": role[1]})
         job_input = {'fabric_fq_name': ["default-global-system-config", name],
                        'role_assignments': role_assignment_list
                     }
-        payload = {'job_template_fq_name': ['default-global-system-config', 'role_assignment_template'], "job_input": job_input}
-        response = requests.post(config_api_url + 'execute-job', data=json.js(payload), headers=vnc_api_headers)
+        payload = {'job_template_fq_name': ['default-global-system-config', 'role_assignment_template'], "input": job_input}
+        response = requests.post(config_api_url + 'execute-job', data=json.dumps(payload), headers=vnc_api_headers)
         if not response.status_code == 200:
           failed = True
           result["message"] = response.text

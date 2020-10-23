@@ -43,19 +43,25 @@ author:
 '''
 
 EXAMPLES = '''
-# Pass in a message
+##
+# this command can be used to see device onboard log
+##
+# docker exec -it analytics_api_1 contrail-logs --object-type job-execution
+
 - name: create fabric
   tungstenfabric.networking.fabric:
     name: fabric1
     controller_ip: x.x.x.x
     state: present
+    device_username: root
+    device_password: lab123
+    management_subnets: [192.168.122.101/32, 192.168.122.102/32, 192.168.122.103/32, 192.168.122.104/32]
 
 - name: delete fabric
   tungstenfabric.networking.fabric:
     name: fabric1
     controller_ip: x.x.x.x
     state: absent
-
 '''
 
 RETURN = '''
@@ -82,9 +88,9 @@ def run_module():
         state=dict(type='str', required=False, default='present', choices=['absent', 'present']),
         domain=dict(type='str', required=False, default='default-domain'),
         project=dict(type='str', required=False, default='admin'),
-        device_username=dict(type='str', required=False, default='root'),
-        device_password=dict(type='str', required=False, default='lab123'),
-        management_subnets=dict(type='list', required=False),
+        device_username=dict(type='str', required=True),
+        device_password=dict(type='str', required=True),
+        management_subnets=dict(type='list', required=True)
     )
     result = dict(
         changed=False,
@@ -105,7 +111,7 @@ def run_module():
     project = module.params.get("project")
     device_username = module.params.get("device_username")
     device_password = module.params.get("device_password")
-    management_subnets = module.params.get("manamanagement_subnets")
+    management_subnets = module.params.get("management_subnets")
 
     if module.check_mode:
         module.exit_json(**result)
@@ -116,31 +122,32 @@ def run_module():
 
     ## begin: object specific
     config_api_url = 'http://' + controller_ip + ':8082/'
+    failed = False
+
     if update:
       if state == 'present':
         result["message"] = "fabric is already onboarded, nothing to do"
       elif state == 'absent':
         # delete fabric
-        payload = {'job_template_fq_name': ['default-global-system-config', 'fabric_deletion_template'], "job_input": {'fabric_fq_name': ["default-global-system-config", name]}}
-        response = requests.post(config_api_url + 'execute-job', data=json.js(payload), headers=vnc_api_headers)
+        payload = {'job_template_fq_name': ['default-global-system-config', 'fabric_deletion_template'], "input": {'fabric_fq_name': ["default-global-system-config", name]}}
+        response = requests.post(config_api_url + 'execute-job', data=json.dumps(payload), headers=vnc_api_headers)
         if not response.status_code == 200:
           failed = True
           result["message"] = response.text
-      else:
-        module.fail_json(msg='cannot reach here', **result)
     else:
-      if state == 'present'
-        management_subnets_dict= [{"cidr": manamanagement_subnet } for management_subnet in management_subnets]
+      if state == 'present':
+        management_subnets_dict= [{"cidr": management_subnet } for management_subnet in management_subnets]
         job_input = {'fabric_fq_name': ["default-global-system-config", name],
                        'node_profiles': [{"node_profile_name": 'juniper-mx'}, {"node_profile_name": 'juniper-qfx10k'}, {"node_profile_name": 'juniper-qfx10k-lean'}, 
-                                         {"node_profile_name": 'juniper-qfx5k'}, {"node_profile_name": 'juniper-qfx5k-lean'}, {"node_profile_name": 'juniper-srx'}]
+                                         {"node_profile_name": 'juniper-qfx5k'}, {"node_profile_name": 'juniper-qfx5k-lean'}, {"node_profile_name": 'juniper-srx'}],
                        'device_auth': [{"username": device_username, "password": device_password}],
                        'overlay_ibgp_asn': 64512,
                        'management_subnets': management_subnets_dict,
+                       'loopback_subnets': ['172.16.21.0/24'],
                        'enterprise_style': True
                    }
-        payload = {'job_template_fq_name': ['default-global-system-config', 'existing_fabric_onboard_template'], "job_input": job_input}
-        response = requests.post(config_api_url + 'execute-job', data=json.js(payload), headers=vnc_api_headers)
+        payload = {'job_template_fq_name': ['default-global-system-config', 'existing_fabric_onboard_template'], "input": job_input}
+        response = requests.post(config_api_url + 'execute-job', data=json.dumps(payload), headers=vnc_api_headers)
         if not response.status_code == 200:
           failed = True
           result["message"] = response.text
