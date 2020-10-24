@@ -11,10 +11,10 @@ import requests
 # begin: variables: cannot be directly accessed, but can be accessed by get method
 vnc_api_headers= {"Content-Type": "application/json", "charset": "UTF-8"}
 web_api_headers= {"Content-Type": "application/json", "charset": "UTF-8"}
-#config_api_url=""
-#web_api_url=""
+config_api_url=""
+web_api_url=""
 module=None
-#controller_ip=""
+controller_ip=""
 # end: variables
 
 
@@ -102,6 +102,7 @@ def crud(web_api, controller_ip, update, state, result, payload='{}', obj_type='
     if state == "present":
       if update:
         print ("update object")
+
         if obj_type == 'service-instance':
           response = web_api.put(web_api_url + 'api/tenants/config/service-instances/' + uuid, data=payload, headers=web_api_headers, verify=False)
         else:
@@ -137,9 +138,13 @@ def crud(web_api, controller_ip, update, state, result, payload='{}', obj_type='
 
 
 def fqname_to_id (module, fqname, obj_type, controller_ip):
-  #config_api_url = 'http://' + controller_ip + ':8082/'
+  config_api_url = 'http://' + controller_ip + ':8082/'
+  if (type(fqname) == str):
+    fqname_list = fqname.split (":")
+  else:
+    fqname_list = fqname
 
-  response = requests.post(config_api_url + 'fqname-to-id', data=json.dumps({"type": obj_type, "fq_name": fqname.split(":")}), headers=vnc_api_headers)
+  response = requests.post(config_api_url + 'fqname-to-id', data=json.dumps({"type": obj_type, "fq_name": fqname_list}), headers=vnc_api_headers)
   if not response.status_code == 200:
     module.fail_json(msg="{} specified doesn't exist".fqname, **result)
   uuid = json.loads(response.text).get("uuid")

@@ -68,8 +68,9 @@ message:
 import sys
 import json
 import requests
+import uuid as module_uuid
 from ansible.module_utils.basic import AnsibleModule
-from ansible_collections.tungstenfabric.networking.plugins.module_utils.common import login_and_check_id, crud
+from ansible_collections.tungstenfabric.networking.plugins.module_utils.common import login_and_check_id, crud, fqname_to_id, vnc_api_headers
 
 def run_module():
     module_args = dict(
@@ -81,8 +82,7 @@ def run_module():
         uuid=dict(type='str', required=False),
         domain=dict(type='str', required=False, default='default-domain'),
         project=dict(type='str', required=False, default='default-project'),
-        virtual_network=dict(type='str', required=True),
-        uuid=dict(type='str', required=False),
+        virtual_network=dict(type='str', required=False),
         mac_address=dict(type='str', required=False),
         disable_policy=dict(type='bool', required=False),
         allowed_address_pair=dict(type='bool', required=False)
@@ -118,7 +118,9 @@ def run_module():
     (web_api, update, uuid, js) = login_and_check_id(module, name, obj_type, controller_ip, username, password, state, domain=domain, project=project)
 
 
-    if update and state=='present':
+    config_api_url = 'http://' + controller_ip + ':8082/'
+
+    if update and state == 'present':
       pass
     else:
       ## create payload and call API
@@ -133,14 +135,31 @@ def run_module():
       ''' % (domain, project, name)
     )
 
+
     ## begin: object specific
-    if not update and uuid:
-      js["virtual-machine-interface"]["uuid"]=uuid
+
+    if not disable_policy == None:
+      js["virtual-machine-interface"]["virtual_machine_interface_disable_policy"]=disable_policy
+
     if not update and mac_address:
-      js["virtual-machine-interface"]["virtual_machine_interface_mac_addresses"]=["mac_address": mac_address]
+      js["virtual-machine-interface"]["virtual_machine_interface_mac_addresses"]={"mac_address": [mac_address]}
+
+    if not update and js["virtual-machine-interface"].get("virtual_network_refs") == None:
+      vn_fqname = [domain, project, virtual_network]
+      js["virtual-machine-interface"]["virtual_network_refs"]=[{"to": vn_fqname}]
+
+    ##
+    # virtual_machine_refs' attr and href need to be removed, to make webui logic work ..
+    ##
+    if not js["virtual-machine-interface"].get("virtual_machine_refs") == None:
+      del js["virtual-machine-interface"]["virtual_machine_refs"][0]["attr"]
+      del js["virtual-machine-interface"]["virtual_machine_refs"][0]["href"]
+
+
     ## end: object specific
 
     payload=json.dumps(js)
+
 
     failed = crud (web_api, controller_ip, update, state, result, payload=payload, obj_type=obj_type, uuid=uuid)
 
