@@ -47,16 +47,38 @@ author:
 '''
 
 EXAMPLES = '''
-# Pass in a message
 - name: create security-group
-  tungstenfabric.network.security_group:
+  tungstenfabric.networking.security_group:
     name: security-group1
     controller_ip: x.x.x.x
     state: present
     project: admin
+    policy_rule:
+      - src_addresses:
+          - security_group: default-domain:admin:security-group1
+        protocol: any
+        ethertype: IPv4
+      - src_addresses:
+          - subnet: {ip_prefix: "0.0.0.0", ip_prefix_len: 0}
+        dst_ports:
+          - {start_port: 22, end_port: 22}
+        protocol: tcp
+        ethertype: IPv4
+      - src_addresses:
+          - security_group: default-domain:admin:security-group1
+        protocol: any
+        ethertype: IPv6
+      - dst_addresses:
+          - subnet: {ip_prefix: "0.0.0.0", ip_prefix_len: 0}
+        protocol: any
+        ethertype: IPv4
+      - dst_addresses:
+          - subnet: {ip_prefix: "::", ip_prefix_len: 0}
+        protocol: any
+        ethertype: IPv6
 
 - name: delete security-group
-  tungstenfabric.security_group.security_group:
+  tungstenfabric.networking.security_group:
     name: security-group1
     controller_ip: x.x.x.x
     state: absent
@@ -84,7 +106,8 @@ def run_module():
         state=dict(type='str', required=False, default='present', choices=['absent', 'present']),
         uuid=dict(type='str', required=False),
         domain=dict(type='str', required=False, default='default-domain'),
-        project=dict(type='str', required=False, default='default-project')
+        project=dict(type='str', required=False, default='default-project'),
+        policy_rule=dict(type='list', required=False)
     )
     result = dict(
         changed=False,
@@ -103,6 +126,7 @@ def run_module():
     state = module.params.get("state")
     domain = module.params.get("domain")
     project = module.params.get("project")
+    policy_rule = module.params.get("policy_rule")
 
     if module.check_mode:
         module.exit_json(**result)
@@ -127,6 +151,23 @@ def run_module():
     )
 
     ## begin: object specific
+    if (policy_rule):
+      tmp_policy_rule = policy_rule[:]
+
+      for i in range(len(tmp_policy_rule)):
+        # set default values for policy rules
+        if tmp_policy_rule[i].get("direction") == None:
+          tmp_policy_rule[i]["direction"]=">"
+        if tmp_policy_rule[i].get("src_addresses") == None:
+          tmp_policy_rule[i]["src_addresses"]=[{"security_group": "local"}]
+        if tmp_policy_rule[i].get("dst_addresses") == None:
+          tmp_policy_rule[i]["dst_addresses"]=[{"security_group": "local"}]
+        if tmp_policy_rule[i].get("src_ports") == None:
+          tmp_policy_rule[i]["src_ports"]=[{"start_port": 0, "end_port": 65535}]
+        if tmp_policy_rule[i].get("dst_ports") == None:
+          tmp_policy_rule[i]["dst_ports"]=[{"start_port": 0, "end_port": 65535}]
+
+      js["security-group"]["security_group_entries"] = {"policy_rule": tmp_policy_rule}
     ## end: object specific
 
 
