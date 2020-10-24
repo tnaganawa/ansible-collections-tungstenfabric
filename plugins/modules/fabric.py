@@ -46,7 +46,7 @@ EXAMPLES = '''
 ##
 # this command can be used to see device onboard log
 ##
-# docker exec -it analytics_api_1 contrail-logs --object-type job-execution
+# docker exec -it analytics_api_1 contrail-logs --object-type job-execution --start-time=now-20s
 
 - name: create fabric
   tungstenfabric.networking.fabric:
@@ -56,12 +56,27 @@ EXAMPLES = '''
     device_username: root
     device_password: lab123
     management_subnets: [192.168.122.101/32, 192.168.122.102/32, 192.168.122.103/32, 192.168.122.104/32]
+    loopback_subnets: [172.16.11.0/24]
+    overlay_ibgp_asn: 64512
 
 - name: delete fabric
   tungstenfabric.networking.fabric:
     name: fabric1
     controller_ip: x.x.x.x
     state: absent
+
+- name: create fabric with underlay management
+  tungstenfabric.networking.fabric:
+    name: fabric1
+    controller_ip: x.x.x.x
+    state: present
+    device_username: root
+    device_password: lab123
+    management_subnets: [192.168.122.101/32, 192.168.122.102/32, 192.168.122.103/32, 192.168.122.104/32]
+    loopback_subnets: [172.16.11.0/24]
+    fabric_subnets: [172.16.12.0/24]
+    fabric_asn_pool: [65300, 65399]
+
 '''
 
 RETURN = '''
@@ -90,7 +105,12 @@ def run_module():
         project=dict(type='str', required=False, default='admin'),
         device_username=dict(type='str', required=True),
         device_password=dict(type='str', required=True),
-        management_subnets=dict(type='list', required=True)
+        overlay_ibgp_asn=dict(type='int', required=True),
+        enterprise_style=dict(type='bool', required=False, default=True),
+        management_subnets=dict(type='list', required=True),
+        loopback_subnets=dict(type='list', required=True),
+        fabric_subnets=dict(type='list', required=False),
+        fabric_asn_pool=dict(type='list', required=False)
     )
     result = dict(
         changed=False,
@@ -112,6 +132,11 @@ def run_module():
     device_username = module.params.get("device_username")
     device_password = module.params.get("device_password")
     management_subnets = module.params.get("management_subnets")
+    loopback_subnets = module.params.get("loopback_subnets")
+    fabric_subnets = module.params.get("fabric_subnets")
+    fabric_asn_pool = module.params.get("fabric_asn_pool")
+    overlay_ibgp_asn = module.params.get("overlay_ibgp_asn")
+    enterprise_style = module.params.get("enterprise_style")
 
     if module.check_mode:
         module.exit_json(**result)
@@ -141,11 +166,16 @@ def run_module():
                        'node_profiles': [{"node_profile_name": 'juniper-mx'}, {"node_profile_name": 'juniper-qfx10k'}, {"node_profile_name": 'juniper-qfx10k-lean'}, 
                                          {"node_profile_name": 'juniper-qfx5k'}, {"node_profile_name": 'juniper-qfx5k-lean'}, {"node_profile_name": 'juniper-srx'}],
                        'device_auth': [{"username": device_username, "password": device_password}],
-                       'overlay_ibgp_asn': 64512,
+                       'overlay_ibgp_asn': overlay_ibgp_asn,
                        'management_subnets': management_subnets_dict,
-                       'loopback_subnets': ['172.16.21.0/24'],
-                       'enterprise_style': True
+                       'loopback_subnets': loopback_subnets,
+                       'enterprise_style': enterprise_style
                    }
+        if fabric_subnets:
+          # underlay management parameters
+          job_input["fabric_subnets"]=fabric_subnets
+          job_input["fabric_asn_pool"]=[{"asn_min": fabric_asn_pool[0], "asn_max": fabric_asn_pool[1]}]
+
         payload = {'job_template_fq_name': ['default-global-system-config', 'existing_fabric_onboard_template'], "input": job_input}
         response = requests.post(config_api_url + 'execute-job', data=json.dumps(payload), headers=vnc_api_headers)
         if not response.status_code == 200:

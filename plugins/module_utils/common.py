@@ -49,10 +49,12 @@ def login_and_check_id(module, name, obj_type, controller_ip, username, password
     ## check if the fqname exists
     if (obj_type in ['global-system-config']):
       response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "%s", "fq_name": ["default-global-system-config"]}' % (obj_type), headers=vnc_api_headers)
-    elif (obj_type in ['virtual-machine']):
+    elif (obj_type in ['virtual-machine'] or (obj_type == 'tag' and project == None)):
       response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "%s", "fq_name": ["%s"]}' % (obj_type, name), headers=vnc_api_headers)
     elif (obj_type in ['global-vrouter-config']):
       response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "%s", "fq_name": ["default-global-system-config", "default-global-vrouter-config"]}' % (obj_type), headers=vnc_api_headers)
+    elif (obj_type in ['bgp-router']):
+      response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "%s", "fq_name": ["default-domain", "default-project", "ip-fabric", "__default__", "%s"]}' % (obj_type, name), headers=vnc_api_headers)
     elif (obj_type in ['fabric']):
       response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "%s", "fq_name": ["default-global-system-config", "%s"]}' % (obj_type, name), headers=vnc_api_headers)
     elif (obj_type in ['virtual-port-group']):

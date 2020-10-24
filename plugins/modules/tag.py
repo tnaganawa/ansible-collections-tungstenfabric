@@ -29,13 +29,9 @@ options:
         description:
             - tungstenfabric controller ip
         required: true
-    domain:
-        description:
-            - tag subnet
-        required: false
     project:
         description:
-            - tag subnet
+            - project name (if it is define, tag will be project scoped tag)
         required: false
 
 author:
@@ -50,6 +46,7 @@ EXAMPLES = '''
     controller_ip: x.x.x.x
     state: present
     project: admin
+    tag_type: label
 
 - name: delete tag
   tungstenfabric.tag.service_health_check:
@@ -80,7 +77,7 @@ def run_module():
         state=dict(type='str', required=False, default='present', choices=['absent', 'present']),
         uuid=dict(type='str', required=False),
         domain=dict(type='str', required=False, default='default-domain'),
-        project=dict(type='str', required=False, default='default-project'),
+        project=dict(type='str', required=False),
         tag_type=dict(type='str', required=False, default='label', choices=["application", "site", "deployment", "tier", "label"])
     )
     result = dict(
@@ -100,28 +97,45 @@ def run_module():
     state = module.params.get("state")
     domain = module.params.get("domain")
     project = module.params.get("project")
+    tag_type = module.params.get("tag_type")
 
     if module.check_mode:
         module.exit_json(**result)
 
     obj_type='tag'
+    tag_type_name = tag_type + '=' + name
 
-    (web_api, update, uuid, js) = login_and_check_id(module, name, obj_type, controller_ip, username, password, state, domain=domain, project=project)
+    (web_api, update, uuid, js) = login_and_check_id(module, tag_type_name, obj_type, controller_ip, username, password, state, domain=domain, project=project)
 
     if update and state=='present':
       pass
     else:
       ## create payload and call API
-      js=json.loads (
-      '''
-      { "tag":
-        {
-          "fq_name": ["%s", "%s", "%s"],
-          "parent_type": "project"
+      if project:
+        js=json.loads (
+        '''
+        { "tag":
+          {
+            "fq_name": ["%s", "%s", "%s"],
+            "tag_type_name": "%s",
+            "tag_value": "%s",
+            "parent_type": "project"
+          }
         }
-      }
-      ''' % (domain, project, name)
-    )
+        ''' % (domain, project, name, tag_type, name)
+      )
+      else:
+        js=json.loads (
+        '''
+        { "tag":
+          {
+            "fq_name": ["%s"],
+            "tag_type_name": "%s",
+            "tag_value": "%s"
+          }
+        }
+        ''' % (name, tag_type, name)
+      )
 
     ## begin: object specific
     ## end: object specific

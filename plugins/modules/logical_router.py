@@ -58,7 +58,7 @@ EXAMPLES = '''
     controller_ip: x.x.x.x
     state: present
     project: admin
-    router_type: vxlan-routing
+    router_type: snat-routing
     connected_networks: [vn1, vn2]
 
 - name: delete logical-router
@@ -67,6 +67,18 @@ EXAMPLES = '''
     controller_ip: x.x.x.x
     state: absent
     project: admin
+
+- name: create vxlan-routing logical-router in fabric
+  tungstenfabric_logical_router:
+    name: lr1
+    controller_ip: x.x.x.x
+    state: present
+    project: admin
+    router_type: vxlan-routing
+    connected_networks: [vn1, vn2]
+    route_target_list: [64512:10001]
+    vxlan_network_identifier: 10001
+    physical_router_refs: [spine1, spine2]
 
 '''
 
@@ -95,7 +107,10 @@ def run_module():
         domain=dict(type='str', required=False, default='default-domain'),
         project=dict(type='str', required=False, default='default-project'),
         router_type=dict(type='str', required=False, choices=['snat-routing', 'vxlan-routing']),
-        connected_networks=dict(type='list', required=False)
+        connected_networks=dict(type='list', required=False),
+        route_target_list=dict(type='list', required=False),
+        vxlan_network_identifier=dict(type='int', required=False),
+        physical_router_refs=dict(type='list', required=False)
     )
     result = dict(
         changed=False,
@@ -116,6 +131,9 @@ def run_module():
     project = module.params.get("project")
     router_type = module.params.get("router_type")
     connected_networks = module.params.get("connected_networks")
+    route_target_list = module.params.get("route_target_list")
+    vxlan_network_identifier = module.params.get("vxlan_network_identifier")
+    physical_router_refs = module.params.get("physical_router_refs")
 
     if module.check_mode:
         module.exit_json(**result)
@@ -142,6 +160,12 @@ def run_module():
 
     if router_type:
       js ["logical-router"]["logical_router_type"]=router_type
+    if vxlan_network_identifier:
+      js ["logical-router"]["vxlan_network_identifier"]=str(vxlan_network_identifier)
+    if physical_router_refs:
+      js ["logical-router"]["physical_router_refs"]=[{"to": ["default-global-system-config", physical_router]} for physical_router in physical_router_refs]
+    if route_target_list:
+      js ["logical-router"]["configured_route_target_list"]={"route_target": [ "target:{}".format(route_target) for route_target in route_target_list] }
 
     print ("connected_networks", connected_networks)
     if not connected_networks == None:

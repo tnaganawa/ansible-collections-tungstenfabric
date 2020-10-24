@@ -39,8 +39,10 @@ EXAMPLES = '''
 - name: update global-vrouter-config
   tungstenfabric.global_vrouter_config.global_vrouter_config:
     controller_ip: x.x.x.x
-    state: present
+    vxlan_network_identifier_mode: configured
+    encapsulation_priorities: [VXLAN, MPLSoUDP, MPLSoGRE]
     flow_export_rate: 100
+    port_translation_pool: {tcp: 1023, udp: 1023}
 '''
 
 RETURN = '''
@@ -63,8 +65,10 @@ def run_module():
         username=dict(type='str', required=False, default='admin'),
         password=dict(type='str', required=False, default='contrail123'),
         state=dict(type='str', required=False, default='present', choices=['present']),
-        uuid=dict(type='str', required=False),
+        vxlan_network_identifier_mode=dict(type='str', required=False, choices=['automatic', 'configured']),
+        encapsulation_priorities=dict(type='list', required=False),
         flow_export_rate=dict(type='int', required=False),
+        port_translation_pool=dict(type='dict', required=False)
     )
     result = dict(
         changed=False,
@@ -81,7 +85,10 @@ def run_module():
     username = module.params.get("username")
     password = module.params.get("password")
     state = module.params.get("state")
+    vxlan_network_identifier_mode = module.params.get("vxlan_network_identifier_mode")
+    encapsulation_priorities = module.params.get("encapsulation_priorities")
     flow_export_rate = module.params.get("flow_export_rate")
+    port_translation_pool = module.params.get("port_translation_pool")
 
     if module.check_mode:
         module.exit_json(**result)
@@ -90,8 +97,23 @@ def run_module():
 
     (web_api, update, uuid, js) = login_and_check_id(module, name, obj_type, controller_ip, username, password, state)
 
+    ## begin: object specific
+    if vxlan_network_identifier_mode:
+      js ["global-vrouter-config"]["vxlan_network_identifier_mode"]=vxlan_network_identifier_mode
+
+    if encapsulation_priorities:
+      js ["global-vrouter-config"]["encapsulation_priorities"]["encapsulation"]=encapsulation_priorities
+
     if flow_export_rate:
       js ["global-vrouter-config"]["flow_export_rate"]=flow_export_rate
+
+    if port_translation_pool:
+      port_translation_pool_list=[]
+      if port_translation_pool.get("tcp"):
+        port_translation_pool_list.append({"protocol": "tcp", "port_count": str(port_translation_pool.get("tcp"))})
+      if port_translation_pool.get("udp"):
+        port_translation_pool_list.append({"protocol": "udp", "port_count": str(port_translation_pool.get("udp"))})
+      js ["global-vrouter-config"]["port_translation_pools"]={"port_translation_pool": port_translation_pool_list}
 
     ## end: object specific
 
