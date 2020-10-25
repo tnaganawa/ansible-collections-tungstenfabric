@@ -49,13 +49,13 @@ options:
         description:
             - service-template of this service-instance
         required: true
-    left_interface_uuid:
+    left_interface_uuids:
         description:
-            - uuid of left virtual-machine-interface
+            - uuids of left virtual-machine-interface
         required: true
-    right_interface_uuid:
+    right_interface_uuids:
         description:
-            - uuid of right virtual-machine-interface
+            - uuids of right virtual-machine-interface
         required: true
 
 author:
@@ -73,8 +73,8 @@ EXAMPLES = '''
     left_virtual_network: vn1
     right_virtual_network: vn2
     service_template: l3
-    left_interface_uuid: xxxx-xxxx-xxxx-xxxx
-    right_interface_uuid: yyyy-yyyy-yyyy-yyyy
+    left_interface_uuids: [xxxx-xxxx-xxxx-xxxx]
+    right_interface_uuids: [yyyy-yyyy-yyyy-yyyy]
 
 - name: delete service-instance
   tungstenfabric.service_instance.service_instance:
@@ -111,8 +111,8 @@ def run_module():
         mgmt_virtual_network=dict(type='str', required=False),
         left_virtual_network=dict(type='str', required=True),
         right_virtual_network=dict(type='str', required=True),
-        left_interface_uuid=dict(type='str', required=False),
-        right_interface_uuid=dict(type='str', required=False),
+        left_interface_uuids=dict(type='list', required=False),
+        right_interface_uuids=dict(type='list', required=False),
         service_template=dict(type='str', required=True)
     )
     result = dict(
@@ -135,8 +135,8 @@ def run_module():
     mgmt_virtual_network = module.params.get("mgmt_virtual_network")
     left_virtual_network = module.params.get("left_virtual_network")
     right_virtual_network = module.params.get("right_virtual_network")
-    left_interface_uuid = module.params.get("left_interface_uuid")
-    right_interface_uuid = module.params.get("right_interface_uuid")
+    left_interface_uuids = module.params.get("left_interface_uuids")
+    right_interface_uuids = module.params.get("right_interface_uuids")
     service_template = module.params.get("service_template")
 
     if module.check_mode:
@@ -176,18 +176,30 @@ def run_module():
     if mgmt_virtual_network:
       js["service-instance"]["service_instance_properties"]["interface_list"].append({"virtual_network": mgmt_virtual_network})
 
-    if not update and left_interface_uuid:
-      js["service-instance"]["port_tuples"]=[{"to": [domain, project, name, "port-tuple-{}".format(uuid_module.uuid4())], "vmis": [{"fq_name": [domain, project, left_interface_uuid], "interfaceType": "left", "uuid": left_interface_uuid}, {"fq_name": [domain, project, right_interface_uuid], "interfaceType": "right", "uuid": right_interface_uuid}]}]
+    if not update and left_interface_uuids:
+      tmp_port_tuples = []
+      for i in range(len(left_interface_uuids)):
+        port_tuple_uuid = str(uuid_module.uuid4())
+        tmp_port_tuples.append(
+        {"to": [domain, project, name, "port-tuple{}-{}".format(i, port_tuple_uuid)],
+          "vmis": [{"fq_name": [domain, project, left_interface_uuids[i]], "interfaceType": "left", "uuid": left_interface_uuids[i]}, {"fq_name": [domain, project, right_interface_uuids[i]], "interfaceType": "right", "uuid": right_interface_uuids[i]}]
+        })
+      js["service-instance"]["port_tuples"]=tmp_port_tuples
 
-    if state == 'absent':
+    if update:
       response = requests.get (config_api_url + 'service-instance/' + uuid, headers=vnc_api_headers)
       if not response.status_code == 200:
         failed = True
         result["message"] = response.text
         module.fail_json(msg="cannot obtain service-instance object detail", **result)
       port_tuples = json.loads(response.text).get("service-instance").get("port_tuples")
-      # get vmi uuids
+
+
       for i in range(len(port_tuples)):
+        # href needs to be removed, to make webui update logic works ..
+        del port_tuples[i]["href"]
+
+        # get vmi uuids
         port_tuple_uuid = port_tuples[i].get("uuid")
         response = requests.get (config_api_url + 'port-tuple/' + port_tuple_uuid, headers=vnc_api_headers)
         if not response.status_code == 200:
@@ -197,10 +209,23 @@ def run_module():
         vmi_back_refs = json.loads(response.text).get("port-tuple").get("virtual_machine_interface_back_refs")
         vmis = []
         for vmi_back_ref in vmi_back_refs:
-          vmis.append({"uuid": vmi_back_ref.get("uuid")})
+          vmi_uuid = vmi_back_ref.get("uuid")
+          response = requests.get (config_api_url + 'virtual-machine-interface/' + vmi_uuid, headers=vnc_api_headers)
+          if not response.status_code == 200:
+            failed = True
+            result["message"] = response.text
+            module.fail_json(msg="cannot obtain vmi object detail", **result)
+
+          vmi_service_interface_type = json.loads(response.text).get("virtual-machine-interface").get("virtual_machine_interface_properties").get("service_interface_type")
+          vmi_fqname = json.loads(response.text).get("virtual-machine-interface").get("fq_name")
+
+          vmis.append({"uuid": vmi_uuid, "interfaceType": vmi_service_interface_type, "fq_name": vmi_fqname})
         port_tuples[i]["vmis"] = vmis
 
-      userData = {"port_tuples": port_tuples}
+      if state == 'present':
+        js["service-instance"]["port_tuples"] = port_tuples
+      if state == 'absent':
+        userData = {"port_tuples": port_tuples}
 
     ## end: object specific
 
