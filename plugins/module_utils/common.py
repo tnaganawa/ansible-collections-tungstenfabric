@@ -55,7 +55,7 @@ def login_and_check_id(module, name, obj_type, controller_ip, username, password
       response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "%s", "fq_name": ["default-global-system-config", "default-global-vrouter-config"]}' % (obj_type), headers=vnc_api_headers)
     elif (obj_type in ['bgp-router']):
       response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "%s", "fq_name": ["default-domain", "default-project", "ip-fabric", "__default__", "%s"]}' % (obj_type, name), headers=vnc_api_headers)
-    elif (obj_type in ['fabric']):
+    elif (obj_type in ['fabric', 'api-access-list']):
       response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "%s", "fq_name": ["default-global-system-config", "%s"]}' % (obj_type, name), headers=vnc_api_headers)
     elif (obj_type in ['virtual-port-group']):
       response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "%s", "fq_name": ["default-global-system-config", "%s", "%s"]}' % (obj_type, fabric, name), headers=vnc_api_headers)
@@ -81,7 +81,7 @@ def login_and_check_id(module, name, obj_type, controller_ip, username, password
     web_api_headers["x-csrf-token"]=csrftoken
 
     js={}
-    if update and state=='present':
+    if update and (state=='present' or obj_type == 'api-access-list'):
       response = web_api.post(web_api_url + 'api/tenants/config/get-config-objects', data=json.dumps({"data": [{"type": obj_type, "uuid": ["{}".format(uuid)]}]}), headers=web_api_headers, verify=False)
       js = json.loads(response.text)[0]
 
@@ -99,7 +99,7 @@ def crud(web_api, controller_ip, update, state, result, payload='{}', obj_type='
     csrftoken=web_api.cookies['_csrf']
     vnc_api_headers["x-csrf-token"]=csrftoken
 
-    if state == "present":
+    if state == "present" or obj_type == 'api-access-list':
       if update:
         print ("update object")
 

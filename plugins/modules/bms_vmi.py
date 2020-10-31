@@ -50,7 +50,7 @@ EXAMPLES = '''
     state: present
     project: admin
     vpg_vn_vlan_list:
-     - [virtual-port-group1, vn1, 101]
+     - [virtual-port-group1, vn1, 101, native]
      - [virtual-port-group1, vn2, 102]
      - [virtual-port-group2, vn1, 101]
 
@@ -126,7 +126,11 @@ def run_module():
     (web_api, update, uuid, js) = login_and_check_id(module, name, obj_type, controller_ip, username, password, state, domain=domain, project=project, fabric=fabric)
 
 
-    for vpg_name, vn_name, vlan_id in vpg_vn_vlan_list:
+    for i in range(len(vpg_vn_vlan_list)):
+      native_vlan = None
+      vpg_name, vn_name, vlan_id = vpg_vn_vlan_list[i][0:3]
+      if (len(vpg_vn_vlan_list[i]) > 3):
+        native_vlan = vpg_vn_vlan_list[i][3]
 
       ## check if the vpg exists
       response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "virtual-port-group", "fq_name": ["default-global-system-config", "%s", "%s"]}' % (fabric, vpg_name), headers=vnc_api_headers)
@@ -201,6 +205,11 @@ def run_module():
 
         js=json.loads (tmp_str)
         js["virtual-machine-interface"]["virtual_machine_interface_bindings"]["key_value_pair"].append({"key": "profile", "value": local_link_information_str})
+        if (native_vlan == None):
+          js["virtual-machine-interface"]["virtual_machine_interface_properties"]={"sub_interface_vlan_tag": vlan_id}
+        else:
+          js["virtual-machine-interface"]["virtual_machine_interface_bindings"]["key_value_pair"].append({"key": "tor_port_vlan_id", "value": str(vlan_id)})
+          js["virtual-machine-interface"]["virtual_machine_interface_properties"]={"sub_interface_vlan_tag": 0}
 
 
         # TODO:

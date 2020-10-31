@@ -77,6 +77,30 @@ options:
         description:
             - set network-policy (fq_name of network-policy)
         required: false
+    virtual_network_category:
+        description:
+            - routed VN or Switched VN (used only by fabric-manager)
+        required: false
+    routed_properties_logical_router_name:
+        description:
+            - logical-router name for this routed VN
+        required: false
+    routed_properties_physical_router_name_list:
+        description:
+            - physical-router name for this routed properties
+        required: false
+    routed_properties_routed_interface_ip_address_list:
+        description:
+            - logical-router name for this routed VN
+        required: false
+    routed_properties_routing_protocol_list:
+        description:
+            - routing-protocol (static / ospf / eBGP)
+        required: false
+    routed_properties_routing_protocol_ospf_params_area_id_list:
+        description:
+            - area id  of ospf from routed VN
+        required: false
 
 author:
     - Tatsuya Naganawa (@tnaganawa)
@@ -157,6 +181,7 @@ def run_module():
         route_target_list=dict(type='list', required=False),
         import_route_target_list=dict(type='list', required=False),
         export_route_target_list=dict(type='list', required=False),
+        virtual_network_category=dict(type='str', required=False, choices=['routed']),
         network_policy_refs=dict(type='list', required=False),
         tag_refs=dict(type='list', required=False)
     )
@@ -194,6 +219,7 @@ def run_module():
     route_target_list = module.params.get("route_target_list")
     import_route_target_list = module.params.get("import_route_target_list")
     export_route_target_list = module.params.get("export_route_target_list")
+    virtual_network_category = module.params.get("virtual_network_category")
     network_policy_refs = module.params.get("network_policy_refs")
     tag_refs = module.params.get("tag_refs")
 
@@ -238,6 +264,8 @@ def run_module():
       js ["virtual-network"]["ip_fabric_forwarding"]=True
     if fabric_snat:
       js ["virtual-network"]["fabric_snat"]=True
+    if virtual_network_category:
+      js ["virtual-network"]["virtual_network_category"]=virtual_network_category
     if not network_policy_refs == None:
       # ["default-domain:admin:network-policy1"], []]
       network_policy_refs_list=[]
