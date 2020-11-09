@@ -90,6 +90,10 @@ def run_module():
         supports_check_mode=True
     )
 
+    required_if_args = [
+      ["state", "present", ["tag_type"]]
+    ]
+
     name = module.params.get("name")
     controller_ip = module.params.get("controller_ip")
     username = module.params.get("username")

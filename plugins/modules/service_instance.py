@@ -120,6 +120,10 @@ def run_module():
         message=''
     )
 
+    required_if_args = [
+      ["state", "present", ["left_virtual_network", "right_virtual_network", "service_template"]]
+    ]
+
     module = AnsibleModule(
         argument_spec=module_args,
         supports_check_mode=True

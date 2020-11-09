@@ -111,6 +111,10 @@ def run_module():
         message=''
     )
 
+    required_if_args = [
+      ["state", "present", ["role_crud_list", "role_name_list"]]
+    ]
+
     module = AnsibleModule(
         argument_spec=module_args,
         supports_check_mode=True

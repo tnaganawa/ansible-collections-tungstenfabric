@@ -117,6 +117,11 @@ def run_module():
         message=''
     )
 
+    required_if_args = [
+      ["state", "present", ["device_username", "device_password"]]
+    ]
+
+
     module = AnsibleModule(
         argument_spec=module_args,
         supports_check_mode=True

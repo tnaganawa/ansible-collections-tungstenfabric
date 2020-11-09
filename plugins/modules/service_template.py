@@ -99,6 +99,10 @@ def run_module():
         message=''
     )
 
+    required_if_args = [
+      ["state", "present", ["service_mode"]]
+    ]
+
     module = AnsibleModule(
         argument_spec=module_args,
         supports_check_mode=True
