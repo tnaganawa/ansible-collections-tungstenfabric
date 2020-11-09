@@ -45,14 +45,14 @@ author:
 EXAMPLES = '''
 # Pass in a message
 - name: create service-health-check
-  tungstenfabric.network.service_health_check:
+  tungstenfabric.networking.service_health_check:
     name: service-health-check1
     controller_ip: x.x.x.x
     state: present
     project: admin
 
 - name: delete service-health-check
-  tungstenfabric.service_health_check.service_health_check:
+  tungstenfabric.networking.service_health_check:
     name: service-health-check1
     controller_ip: x.x.x.x
     state: absent

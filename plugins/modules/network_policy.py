@@ -64,13 +64,13 @@ EXAMPLES = '''
           simple_action: pass
 
 - name: delete network-policy
-  tungstenfabric.network_policy.network_policy:
+  tungstenfabric.networking.network_policy:
     name: network-policy1
     controller_ip: x.x.x.x
     state: absent
 
 - name: create network-policy with network service
-  tungstenfabric.network.network_policy:
+  tungstenfabric.networking.network_policy:
     name: network-policy1
     controller_ip: x.x.x.x
     state: present

@@ -31,7 +31,7 @@ options:
         required: true
     project:
         description:
-            - project name (if it is define, tag will be project scoped tag)
+            - project name (if it is defined, tag will be project scoped tag)
         required: false
 
 author:
@@ -41,7 +41,7 @@ author:
 EXAMPLES = '''
 # Pass in a message
 - name: create tag
-  tungstenfabric.network.tag:
+  tungstenfabric.networking.tag:
     name: tag1
     controller_ip: x.x.x.x
     state: present
@@ -49,7 +49,7 @@ EXAMPLES = '''
     tag_type: label
 
 - name: delete tag
-  tungstenfabric.tag.service_health_check:
+  tungstenfabric.networking.tag:
     name: tag1
     controller_ip: x.x.x.x
     state: absent

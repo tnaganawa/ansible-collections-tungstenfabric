@@ -49,7 +49,7 @@ author:
 EXAMPLES = '''
 # Pass in a message
 - name: create virtual-machine
-  tungstenfabric.network.virtual_machine:
+  tungstenfabric.networking.virtual_machine:
     name: virtual-machine1
     controller_ip: x.x.x.x
     state: present
@@ -57,7 +57,7 @@ EXAMPLES = '''
     uuid: xxxx-xxxx-xxxx-xxxx
 
 - name: delete virtual-machine
-  tungstenfabric.virtual_machine.network_policy:
+  tungstenfabric.networking.virtual_machine:
     name: virtual-machine1
     controller_ip: x.x.x.x
     state: absent

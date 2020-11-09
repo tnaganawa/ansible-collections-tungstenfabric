@@ -44,21 +44,21 @@ author:
 
 EXAMPLES = '''
 - name: create service-template
-  tungstenfabric.network.service_template:
+  tungstenfabric.networking.service_template:
     name: l3
     controller_ip: x.x.x.x
     state: present
     service_mode: in-network
 
 - name: delete service-template
-  tungstenfabric.service_template.service_template:
+  tungstenfabric.networking.service_template:
     name: l3
     controller_ip: x.x.x.x
     state: absent
     service_mode: in-network
 
 - name: create service-template with some more parameters
-  tungstenfabric.network.service_template:
+  tungstenfabric.networking.service_template:
     name: l3
     controller_ip: x.x.x.x
     state: present
