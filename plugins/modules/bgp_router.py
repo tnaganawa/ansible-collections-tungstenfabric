@@ -37,9 +37,17 @@ options:
         description:
             - bgp-router subnet
         required: false
-    policy_rule:
+    address:
         description:
-            - rule of this bgp-router (see EXAMPLES)
+            - ip addres of this bgp-router
+        required: false
+    autonomous_system:
+        description:
+            - autonomous_system of this bgp-router
+        required: true
+    bgp_router_refs:
+        description:
+            - list of bgp-router names which this bgp-router will have peers
         required: false
 
 author:

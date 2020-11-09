@@ -9,6 +9,7 @@ pip install virtualenv
 virtualenv venv
 source venv/bin/activate
 pip install ansible requests
+yum install -y git
 
 
 ansible-galaxy collection install git+https://github.com/tnaganawa/ansible-collections-tungstenfabric.git

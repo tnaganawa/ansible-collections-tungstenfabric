@@ -37,6 +37,14 @@ options:
         description:
             - virtual-machine-interface project
         required: false
+    uuid:
+        description:
+            - uuid of this virtual-machine-interface
+        required: false
+    disable_policy:
+        description:
+            - to specify if enable or disable policy on this vmi
+        required: false
 
 author:
     - Tatsuya Naganawa (@tnaganawa)
@@ -45,13 +53,13 @@ author:
 EXAMPLES = '''
 # Pass in a message
 - name: create virtual-machine-interface
-  tungstenfabric.virtual_machine_interface.service_instance:
+  tungstenfabric.networking.virtual_machine_interface:
     name: virtual-machine-interface1
     controller_ip: x.x.x.x
     state: present
 
 - name: delete virtual-machine-interface
-  tungstenfabric.virtual_machine_interface.service_instance:
+  tungstenfabric.networking.virtual_machine_interface:
     name: virtual-machine-interface1
     controller_ip: x.x.x.x
     state: absent
