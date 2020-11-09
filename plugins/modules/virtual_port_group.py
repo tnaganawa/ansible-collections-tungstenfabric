@@ -40,6 +40,14 @@ options:
     fabric:
         description:
             - fabric for this vpg
+        required: true
+    physical_interfaces:
+        description:
+            - list of [device, physical-interface] pair
+        required: false
+    share:
+        description:
+            - share this virtual-port-group to specified tenant
         required: false
 
 author:
@@ -53,15 +61,18 @@ EXAMPLES = '''
     name: virtual-port-group1
     controller_ip: x.x.x.x
     state: present
+    fabric: fabric1
     physical_interfaces:
       - [leaf1, xe-0/0/3]
       - [leaf2, xe-0/0/3]
+    share: [tenant1]
 
 - name: delete virtual-port-group
   tungstenfabric.networking.virtual_port_group:
     name: virtual-port-group1
     controller_ip: x.x.x.x
     state: absent
+    fabric: fabric1
 
 '''
 
@@ -90,7 +101,8 @@ def run_module():
         domain=dict(type='str', required=False, default='default-domain'),
         project=dict(type='str', required=False, default='admin'),
         fabric=dict(type='str', required=True),
-        physical_interfaces=dict(type='list', required=False)
+        physical_interfaces=dict(type='list', required=False),
+        share=dict(type='list', required=False)
     )
     result = dict(
         changed=False,
@@ -111,6 +123,7 @@ def run_module():
     project = module.params.get("project")
     fabric = module.params.get("fabric")
     physical_interfaces = module.params.get("physical_interfaces")
+    share = module.params.get("share")
 
     if module.check_mode:
         module.exit_json(**result)
@@ -144,6 +157,8 @@ def run_module():
       if state == 'present':
         # add physical-interfaces
         js["virtual-port-group"]["physical_interface_refs"]=physical_interface_refs
+        if not share == None:
+          js["virtual-port-group"]["perm2"]=share
         response = requests.put(config_api_url + 'virtual-port-group/' + uuid, data=json.dumps(js), headers=vnc_api_headers)
         if not response.status_code == 200:
           failed = True
