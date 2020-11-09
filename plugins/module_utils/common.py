@@ -37,8 +37,9 @@ def login_and_check_id(module, name, obj_type, controller_ip, username, password
       os_username = os.getenv('OS_USER_NAME', 'admin')
       os_password = os.getenv('OS_PASSWORD', 'contrail123')
       os_project_domain_name = os.getenv('OS_PROJECT_DOMAIN_NAME', 'Default')
+      os_user_domain_name = os.getenv('OS_USER_DOMAIN_NAME', 'Default')
       os_project_name = os.getenv('OS_PROJECT_NAME', 'admin')
-      keystone_data = {"auth": {"identity": {"methods": ["{}".format(os_auth_type)], "password": {"user": {"name": "{}".format(os_username), "password": "{}".format(os_password), "domain": {"name": "{}".format(os_project_domain_name)}}}}, "scope": {"project": {"name": "{}".format(os_project_name), "domain": {"name": "{}".format(os_project_domain_name)}}}}}
+      keystone_data = {"auth": {"identity": {"methods": ["{}".format(os_auth_type)], "password": {"user": {"name": "{}".format(os_username), "password": "{}".format(os_password), "domain": {"name": "{}".format(os_user_domain_name)}}}}, "scope": {"project": {"name": "{}".format(os_project_name), "domain": {"name": "{}".format(os_project_domain_name)}}}}}
       response = requests.post(url, data=json.dumps(keystone_data), headers=vnc_api_headers)
       if not (response.status_code == 200 or response.status_code == 201):
         module.fail_json("keystone token cannot be obtained")
