@@ -47,7 +47,7 @@ options:
         required: false
     share:
         description:
-            - share this virtual-port-group to specified tenant
+            - share this virtual-port-group to specified tenant with specified permission
         required: false
 
 author:
@@ -65,7 +65,7 @@ EXAMPLES = '''
     physical_interfaces:
       - [leaf1, xe-0/0/3]
       - [leaf2, xe-0/0/3]
-    share: [tenant1]
+    share: [[tenant1, 5]]
 
 - name: delete virtual-port-group
   tungstenfabric.networking.virtual_port_group:
@@ -157,13 +157,26 @@ def run_module():
       if state == 'present':
         # add physical-interfaces
         js["virtual-port-group"]["physical_interface_refs"]=physical_interface_refs
+
         if not share == None:
-          js["virtual-port-group"]["perm2"]=share
+          tmp_share_list=[]
+          for tenant_name, tenant_permission in share:
+            response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "project", "fq_name": ["%s", "%s"]}' % (domain, tenant_name), headers=vnc_api_headers)
+            if not response.status_code == 200:
+              failed = True
+              result["message"] = response.text
+              module.fail_json(msg="uuid of specified shared project cannot be obtained", **result)
+            project_uuid = json.loads(response.text).get("uuid")
+            tmp_share_list.append({"tenant": project_uuid, "tenant_access": tenant_permission})
+          js["virtual-port-group"]["perms2"]["share"]=tmp_share_list
+
+
         response = requests.put(config_api_url + 'virtual-port-group/' + uuid, data=json.dumps(js), headers=vnc_api_headers)
         if not response.status_code == 200:
           failed = True
           result["message"] = response.text
-          module.fail_json(msg="physical interface addition failed", **result)
+          module.fail_json(msg="vpg update failed", **result)
+
 
       elif state == 'absent':
         # delete virtual-port-group

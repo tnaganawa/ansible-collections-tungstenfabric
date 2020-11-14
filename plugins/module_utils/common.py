@@ -112,15 +112,20 @@ def crud(web_api, controller_ip, update, state, result, payload='{}', obj_type='
         print ("create object")
         if obj_type == 'service-instance':
           response = web_api.post(web_api_url + 'api/tenants/config/service-instances', data=payload, headers=web_api_headers, verify=False)
+        elif obj_type == 'loadbalancer':
+          response = web_api.post(web_api_url + 'api/tenants/config/lbaas/load-balancer', data=payload, headers=web_api_headers, verify=False)
         else:
           response = web_api.post(web_api_url + 'api/tenants/config/create-config-object', data=payload, headers=web_api_headers, verify=False)
     elif (state == "absent"):
       if update:
         print ("delete object {}".format(uuid))
-        delete_data=[{"type": obj_type, "deleteIDs": ["{}".format(uuid)]}]
-        if not userData == {}:
-          delete_data[0]["userData"]=userData
-        response = web_api.post(web_api_url + 'api/tenants/config/delete', data=json.dumps(delete_data), headers=web_api_headers, verify=False)
+        if obj_type == 'loadbalancer':
+          response = web_api.post(web_api_url + 'api/tenants/config/lbaas/load-balancer/delete', data=json.dumps({"uuids": [uuid]}), headers=web_api_headers, verify=False)
+        else:
+          delete_data=[{"type": obj_type, "deleteIDs": ["{}".format(uuid)]}]
+          if not userData == {}:
+            delete_data[0]["userData"]=userData
+          response = web_api.post(web_api_url + 'api/tenants/config/delete', data=json.dumps(delete_data), headers=web_api_headers, verify=False)
       else:
         result["message"]="delete is requested, but that fq_name is not avaialbe"
         result["changed"]=False

@@ -85,14 +85,15 @@ def run_module():
         message=''
     )
 
-    module = AnsibleModule(
-        argument_spec=module_args,
-        supports_check_mode=True
-    )
-
     required_if_args = [
       ["state", "present", ["tag_type"]]
     ]
+
+    module = AnsibleModule(
+        argument_spec=module_args,
+        supports_check_mode=True,
+        required_if=required_if_args
+    )
 
     name = module.params.get("name")
     controller_ip = module.params.get("controller_ip")
