@@ -21,7 +21,7 @@ controller_ip=""
 def get_config_api_url():
     return config_api_url
 
-def login_and_check_id(module, name, obj_type, controller_ip, username, password, state, domain='default-domain', project='default-project', fabric='dummy'):
+def login_and_check_id(module, name, obj_type, controller_ip, username, password, state, domain='default-domain', project='default-project', fabric='dummy', physical_router='dummy'):
     controller_ip = controller_ip
     config_api_url = 'http://' + controller_ip + ':8082/'
     web_api_url = 'https://' + controller_ip + ':8143/'
@@ -60,6 +60,8 @@ def login_and_check_id(module, name, obj_type, controller_ip, username, password
       response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "%s", "fq_name": ["default-global-system-config", "%s"]}' % (obj_type, name), headers=vnc_api_headers)
     elif (obj_type in ['virtual-port-group']):
       response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "%s", "fq_name": ["default-global-system-config", "%s", "%s"]}' % (obj_type, fabric, name), headers=vnc_api_headers)
+    elif (obj_type in ['physical-interface']):
+      response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "%s", "fq_name": ["default-global-system-config", "%s", "%s"]}' % (obj_type, physical_router, name), headers=vnc_api_headers)
     elif (obj_type in ['service-template']):
       response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "%s", "fq_name": ["%s", "%s"]}' % (obj_type, domain, name), headers=vnc_api_headers)
     else:
