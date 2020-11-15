@@ -49,8 +49,9 @@ EXAMPLES = '''
     controller_ip: x.x.x.x
     state: present
     project: admin
-    loadbalancer_pool: loadbalancer1-pool
-    address: 10.0.11.11
+    loadbalancer_subnet_uuid: xxxx-xxxx-xxxx-xxxx
+    loadbalancer_pool_uuid: xxxx-xxxx-xxxx-xxxx
+    address: 10.0.11.13
     port: 80
 
 - name: delete loadbalancer-member
@@ -83,7 +84,8 @@ def run_module():
         uuid=dict(type='str', required=False),
         domain=dict(type='str', required=False, default='default-domain'),
         project=dict(type='str', required=False, default='default-project'),
-        loadbalancer_pool=dict(type='str', required=True),
+        loadbalancer_subnet_uuid=dict(type='str', required=False),
+        loadbalancer_pool_uuid=dict(type='str', required=False),
         address=dict(type='str', required=False),
         port=dict(type='int', required=False),
         weight=dict(type='int', required=False, default=1)
@@ -93,9 +95,14 @@ def run_module():
         message=''
     )
 
+    required_if_args = [
+      ["state", "present", ["loadbalancer_subnet_uuid", "loadbalancer_pool_uuid", "address", "port"]]
+    ]
+
     module = AnsibleModule(
         argument_spec=module_args,
-        supports_check_mode=True
+        supports_check_mode=True,
+        required_if=required_if_args
     )
 
     name = module.params.get("name")
@@ -105,14 +112,17 @@ def run_module():
     state = module.params.get("state")
     domain = module.params.get("domain")
     project = module.params.get("project")
-    policy_rule = module.params.get("policy_rule")
+    loadbalancer_subnet_uuid = module.params.get("loadbalancer_subnet_uuid")
+    loadbalancer_pool_uuid = module.params.get("loadbalancer_pool_uuid")
+    address = module.params.get("address")
+    port = module.params.get("port")
 
     if module.check_mode:
         module.exit_json(**result)
 
     obj_type='loadbalancer-member'
 
-    (web_api, update, uuid, js) = login_and_check_id(module, name, obj_type, controller_ip, username, password, state, domain=domain, project=project)
+    (web_api, update, uuid, js) = login_and_check_id(module, name, obj_type, controller_ip, username, password, state, domain=domain, project=project, loadbalancer_pool=loadbalancer_pool_uuid)
 
     if update and state=='present':
       pass
@@ -126,10 +136,12 @@ def run_module():
           "parent_type": "loadbalancer-pool"
         }
       }
-      ''' % (domain, project, loadbalancer_pool, name)
+      ''' % (domain, project, loadbalancer_pool_uuid, name)
     )
 
     ## begin: object specific
+    if (address):
+      js["loadbalancer-member"]["loadbalancer_member_properties"]["subnet_id"] =  loadbalancer_pool_uuid
     if (address):
       js["loadbalancer-member"]["loadbalancer_member_properties"]["address"] =  address
     if (port):
