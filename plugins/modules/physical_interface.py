@@ -31,7 +31,7 @@ options:
         required: true
     physical-router:
         description:
-            - physical-router for this physical-interface
+            - physical-router for this physical-interface (this needs to be unique among fabrics)
         required: true
     share:
         description:
@@ -57,7 +57,6 @@ EXAMPLES = '''
     controller_ip: x.x.x.x
     state: absent
     physical_router: leaf1
-
 '''
 
 RETURN = '''
@@ -112,18 +111,13 @@ def run_module():
 
     obj_type='physical-interface'
 
-    (web_api, update, uuid, js) = login_and_check_id(module, name, obj_type, controller_ip, username, password, state, domain=domain, project=project, phyical_router=physical_router)
+    (web_api, update, uuid, js) = login_and_check_id(module, name, obj_type, controller_ip, username, password, state, domain=domain, project=project, physical_router=physical_router)
 
     ## begin: object specific
     config_api_url = 'http://' + controller_ip + ':8082/'
 
     failed=False
 
-
-    ## create physical_interface_refs when physical_interface is not empty
-    physical_interface_refs=[]
-    if state == 'present' and physical_interfaces:
-      pass
 
     if update:
       if state == 'present':

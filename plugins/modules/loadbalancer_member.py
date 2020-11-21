@@ -116,13 +116,14 @@ def run_module():
     loadbalancer_pool_uuid = module.params.get("loadbalancer_pool_uuid")
     address = module.params.get("address")
     port = module.params.get("port")
+    weight = module.params.get("weight")
 
     if module.check_mode:
         module.exit_json(**result)
 
     obj_type='loadbalancer-member'
 
-    (web_api, update, uuid, js) = login_and_check_id(module, name, obj_type, controller_ip, username, password, state, domain=domain, project=project, loadbalancer_pool=loadbalancer_pool_uuid)
+    (web_api, update, uuid, js) = login_and_check_id(module, name, obj_type, controller_ip, username, password, state, domain=domain, project=project, loadbalancer_pool="undefined-" + loadbalancer_pool_uuid)
 
     if update and state=='present':
       pass
@@ -132,8 +133,9 @@ def run_module():
       '''
       { "loadbalancer-member":
         {
-          "fq_name": ["%s", "%s", "%s", "%s"],
-          "parent_type": "loadbalancer-pool"
+          "fq_name": ["%s", "%s", "undefined-%s", "%s"],
+          "parent_type": "loadbalancer-pool",
+          "loadbalancer_member_properties": {"admin_state": true}
         }
       }
       ''' % (domain, project, loadbalancer_pool_uuid, name)
@@ -141,7 +143,7 @@ def run_module():
 
     ## begin: object specific
     if (address):
-      js["loadbalancer-member"]["loadbalancer_member_properties"]["subnet_id"] =  loadbalancer_pool_uuid
+      js["loadbalancer-member"]["loadbalancer_member_properties"]["subnet_id"] =  loadbalancer_subnet_uuid
     if (address):
       js["loadbalancer-member"]["loadbalancer_member_properties"]["address"] =  address
     if (port):
