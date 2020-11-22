@@ -62,6 +62,8 @@ def login_and_check_id(module, name, obj_type, controller_ip, username, password
       response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "%s", "fq_name": ["default-global-system-config", "%s", "%s"]}' % (obj_type, fabric, name), headers=vnc_api_headers)
     elif (obj_type in ['physical-interface']):
       response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "%s", "fq_name": ["default-global-system-config", "%s", "%s"]}' % (obj_type, physical_router, name), headers=vnc_api_headers)
+    elif (obj_type in ['application-policy-set', 'firewall-rule', 'firewall-policy'] and project == None):
+      response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "%s", "fq_name": ["default-policy-management", "%s"]}' % (obj_type, name), headers=vnc_api_headers)
     elif (obj_type in ['service-template']):
       response = requests.post(config_api_url + 'fqname-to-id', data='{"type": "%s", "fq_name": ["%s", "%s"]}' % (obj_type, domain, name), headers=vnc_api_headers)
     elif (obj_type in ['loadbalancer-member']):
