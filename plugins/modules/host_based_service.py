@@ -44,11 +44,32 @@ author:
 
 EXAMPLES = '''
 - name: create host-based-service
+  tungstenfabric.networking.project:
+    name: admin
+    controller_ip: x.x.x.x
+    state: present
+    quota: {host_based_service: 1}
+
+- name: create host-based-service
   tungstenfabric.networking.host_based_service:
-    name: host-based-service1
+    name: host-based-service-1
     controller_ip: x.x.x.x
     state: present
     project: admin
+
+### create virtual-machine
+# openstack server create --flavor centos --image centos7 --network __host-based-service-1-hbf-left__ --network __host-based-service-1-hbf-right__ hbs-vm1
+
+- name: create project-scope firewall_rule for host-based service
+  tungstenfabric.networking.firewall_rule:
+    name: firewall_rule1
+    controller_ip: x.x.x.x
+    state: present
+    project: admin
+    endpoint_1: {virtual_network: default-domain:admin:vn1}
+    endpoint_2: {virtual_network: default-domain:admin:vn2}
+    service: {protocol: any}
+    action_list: {simple_action: pass, host_based_service: true}
 
 - name: delete host-based-service
   tungstenfabric.networking.host_based_service:

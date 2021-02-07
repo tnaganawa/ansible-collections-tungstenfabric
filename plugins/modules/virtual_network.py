@@ -37,6 +37,26 @@ options:
         description:
             - virtual-network subnet prefix
         required: false
+    addr_from_start:
+        description:
+            - when it is set to true, subnet address is assigned from .1, .2, ... and if it is set to false, .254, .253, ... will be used (Default: false)
+        required: false
+    default_gateway:
+        description:
+            - ip address for default gateway served by vRouter
+        required: false
+    dns_server_address:
+        description:
+            - ip address for dns_server_address served by vRouter
+        required: false
+    enable_dhcp:
+        description:
+            - if it is set to true,  dhcp is served by vRouter (Default: true)
+        required: false
+    dns_nameservers:
+        description:
+            - list of nameservers
+        required: false
     domain:
         description:
             - virtual-network subnet
@@ -132,6 +152,10 @@ EXAMPLES = '''
     project: admin
     subnet: 10.0.1.0
     subnet_prefix: 24
+    addr_from_start: true
+    default_gateway: 10.0.1.1
+    dns_nameserver: 10.0.1.2
+    enable_dhcp: true
     rpf: enable
     vxlan_network_identifier: 101
     route_target_list: [target:64512:101, target:65501:101]
@@ -166,6 +190,11 @@ def run_module():
         project=dict(type='str', required=False, default='default-project'),
         subnet=dict(type='str', required=False),
         subnet_prefix=dict(type='int', required=False),
+        addr_from_start=dict(type='bool', required=False, default=False),
+        default_gateway=dict(type='str', required=False),
+        dns_server_address=dict(type='str', required=False),
+        enable_dhcp=dict(type='bool', required=False),
+        dns_nameservers=dict(type='list', required=False),
         flood_unknown_unicast=dict(type='bool', required=False),
         ip_fabric_forwarding=dict(type='bool', required=False),
         fabric_snat=dict(type='bool', required=False),
@@ -209,6 +238,11 @@ def run_module():
     project = module.params.get("project")
     subnet = module.params.get("subnet")
     subnet_prefix = module.params.get("subnet_prefix")
+    addr_from_start = module.params.get("addr_from_start")
+    default_gateway = module.params.get("default_gateway")
+    dns_server_address = module.params.get("dns_server_address")
+    enable_dhcp = module.params.get("enable_dhcp")
+    dns_nameservers = module.params.get("dns_nameservers")
     flood_unknown_unicast = module.params.get("flood_unknown_unicast")
     ip_fabric_forwarding = module.params.get("ip_fabric_forwarding")
     fabric_snat = module.params.get("fabric_snat")
@@ -252,12 +286,31 @@ def run_module():
       if (js["virtual-network"].get("network_ipam_refs")==None):
         js ["virtual-network"]["network_ipam_refs"]=[
           {"to": ["default-domain", "default-project", "default-network-ipam"],
-          "attr": {"ipam_subnets": [{"subnet": {"ip_prefix": subnet, "ip_prefix_len": subnet_prefix}}]}
+            "attr": {"ipam_subnets":
+              [
+                {"subnet":
+                  {"ip_prefix": subnet, "ip_prefix_len": subnet_prefix}
+                }
+              ]
+            }
           }
         ]
         subnet_uuid=str(uuid_module.uuid4())
         js ["virtual-network"]["network_ipam_refs"][0]["attr"]["ipam_subnets"][0]["subnet_uuid"]=subnet_uuid
         js ["virtual-network"]["network_ipam_refs"][0]["attr"]["ipam_subnets"][0]["subnet_name"]=subnet_uuid
+
+        subnet_param = js ["virtual-network"]["network_ipam_refs"][0]["attr"]["ipam_subnets"][0]
+        if not addr_from_start == None:
+          subnet_param["addr_from_start"]=addr_from_start
+        if not default_gateway == None:
+          subnet_param["default_gateway"]=default_gateway
+        if not dns_server_address == None:
+          subnet_param["dns_server_address"]=dns_server_address
+        if not enable_dhcp == None:
+          subnet_param["enable_dhcp"]=enable_dhcp
+        if not dns_nameservers == None:
+          subnet_param["dns_nameservers"]=dns_nameservers
+
     if flood_unknown_unicast:
       js ["virtual-network"]["flood_unknown_unicast"]=True
     if ip_fabric_forwarding:
