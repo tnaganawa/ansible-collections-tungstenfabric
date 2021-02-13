@@ -37,6 +37,10 @@ options:
         description:
             - virtual-machine-interface project
         required: false
+    virtual_network:
+        description:
+            - virtual-machine-interface virtual-network
+        required: false
     uuid:
         description:
             - uuid of this virtual-machine-interface
@@ -44,6 +48,10 @@ options:
     disable_policy:
         description:
             - to specify if enable or disable policy on this vmi
+        required: false
+    port_binding_vnic_type:
+        description:
+            - to specify port binding
         required: false
 
 author:
@@ -57,12 +65,23 @@ EXAMPLES = '''
     name: virtual-machine-interface1
     controller_ip: x.x.x.x
     state: present
+    project: admin
+    virtual_network: vn1
 
 - name: delete virtual-machine-interface
   tungstenfabric.networking.virtual_machine_interface:
     name: virtual-machine-interface1
     controller_ip: x.x.x.x
     state: absent
+
+- name: create SR-IOV port
+  tungstenfabric.networking.virtual_machine_interface:
+    name: virtual-machine-interface1
+    controller_ip: x.x.x.x
+    state: present
+    project: admin
+    virtual_network: vn-physnet1
+    port_binding_vnic_type: direct
 
 '''
 
@@ -93,6 +112,7 @@ def run_module():
         virtual_network=dict(type='str', required=False),
         mac_address=dict(type='str', required=False),
         disable_policy=dict(type='bool', required=False),
+        port_binding_vnic_type=dict(type='str', required=False, choices=['direct']),
         allowed_address_pair=dict(type='bool', required=False)
     )
     result = dict(
@@ -100,9 +120,14 @@ def run_module():
         message=''
     )
 
+    required_if_args = [
+      ["state", "present", ["virtual_network"]]
+    ]
+
     module = AnsibleModule(
         argument_spec=module_args,
-        supports_check_mode=True
+        supports_check_mode=True,
+        required_if=required_if_args
     )
 
     name = module.params.get("name")
@@ -117,6 +142,7 @@ def run_module():
     mac_address = module.params.get("mac_address")
     allowed_address_pair = module.params.get("allowed_address_pair")
     disable_policy = module.params.get("disable_policy")
+    port_binding_vnic_type = module.params.get("port_binding_vnic_type")
 
     if module.check_mode:
         module.exit_json(**result)
@@ -149,6 +175,13 @@ def run_module():
     if not disable_policy == None:
       js["virtual-machine-interface"]["virtual_machine_interface_disable_policy"]=disable_policy
 
+    if not port_binding_vnic_type == None:
+      if js["virtual-machine-interface"].get("virtual_machine_interface_bindings") == None:
+        js["virtual-machine-interface"]["virtual_machine_interface_bindings"]={}
+      if js["virtual-machine-interface"].get("virtual_machine_interface_bindings").get("key_value_pair") == None:
+        js["virtual-machine-interface"]["virtual_machine_interface_bindings"]["key_value_pair"]=[]
+      js["virtual-machine-interface"]["virtual_machine_interface_bindings"]["key_value_pair"].append({"key": "vnic_type", "value": port_binding_vnic_type})
+
     if not update and mac_address:
       js["virtual-machine-interface"]["virtual_machine_interface_mac_addresses"]={"mac_address": [mac_address]}
 
@@ -162,7 +195,6 @@ def run_module():
     if not js["virtual-machine-interface"].get("virtual_machine_refs") == None:
       del js["virtual-machine-interface"]["virtual_machine_refs"][0]["attr"]
       del js["virtual-machine-interface"]["virtual_machine_refs"][0]["href"]
-
 
     ## end: object specific
 
