@@ -121,6 +121,18 @@ options:
         description:
             - area id  of ospf from routed VN
         required: false
+    provider_network:
+        description:
+            - bool to use this VN as provider-network (default: false)
+        required: false
+    provider_network_physical_network:
+        description:
+            - physical network which this VN is associated to
+        required: false
+    provider_network_segmentation_id:
+        description:
+            - provider network segmentation id which this VN is associated to
+        required: false
 
 author:
     - Tatsuya Naganawa (@tnaganawa)
@@ -160,6 +172,16 @@ EXAMPLES = '''
     vxlan_network_identifier: 101
     route_target_list: [target:64512:101, target:65501:101]
     network_policy_refs: [default-domain:admin:vn1-to-vn2]
+
+- name: create virtual-network as provider network for SR-IOV NIC
+  tungstenfabric_virtual_network:
+    name: vn-physnet1
+    controller_ip: x.x.x.x
+    state: present
+    project: admin
+    provider_network: true
+    provider_network_physical_network: physnet1
+    provider_network_segmentation_id: 100
 
 '''
 
@@ -212,6 +234,9 @@ def run_module():
         export_route_target_list=dict(type='list', required=False),
         virtual_network_category=dict(type='str', required=False, choices=['routed']),
         network_policy_refs=dict(type='list', required=False),
+        provider_network=dict(type='bool', required=False, default=False),
+        provider_network_physical_network=dict(type='str', required=False),
+        provider_network_segmentation_id=dict(type='int', required=False),
         tag_refs=dict(type='list', required=False)
     )
     result = dict(
@@ -220,7 +245,8 @@ def run_module():
     )
 
     required_if_args = [
-      ["global_object", True, ["domain", "project", "name", "route_target_list", "vxlan_network_identifier"]]
+      ["global_object", True, ["domain", "project", "name", "route_target_list", "vxlan_network_identifier"]],
+      ["provider_network", True, ["provider_network_physical_network", "provider_network_segmentation_id"]]
     ]
 
     module = AnsibleModule(
@@ -255,6 +281,9 @@ def run_module():
     export_route_target_list = module.params.get("export_route_target_list")
     virtual_network_category = module.params.get("virtual_network_category")
     network_policy_refs = module.params.get("network_policy_refs")
+    provider_network = module.params.get("provider_network")
+    provider_network_physical_network = module.params.get("provider_network_physical_network")
+    provider_network_segmentation_id = module.params.get("provider_network_segmentation_id")
     tag_refs = module.params.get("tag_refs")
 
     if module.check_mode:
@@ -309,7 +338,7 @@ def run_module():
         if not enable_dhcp == None:
           subnet_param["enable_dhcp"]=enable_dhcp
         if not dns_nameservers == None:
-          subnet_param["dns_nameservers"]=dns_nameservers
+          subnet_param["dhcp_option_list"]={"dhcp_option": [{"dhcp_option_name": "6", "dhcp_option_value": " ".join(dns_nameservers)}]}
 
     if flood_unknown_unicast:
       js ["virtual-network"]["flood_unknown_unicast"]=True
@@ -329,6 +358,11 @@ def run_module():
         np_uuid = json.loads(response.text).get("uuid")
         network_policy_refs_list.append ({"to": np_fqname.split(":"), "uuid": np_uuid, "attr": {"sequence": {"major": 0, "minor": 0}}})
       js ["virtual-network"]["network_policy_refs"]=network_policy_refs_list
+    if provider_network:
+      if js["virtual-network"].get("provider_properties")==None:
+        js ["virtual-network"]["provider_properties"]={}
+      js ["virtual-network"]["provider_properties"]["physical_network"]=provider_network_physical_network
+      js ["virtual-network"]["provider_properties"]["segmentation_id"]=provider_network_segmentation_id
 
     if not tag_refs == None:
       # ["default-domain:admin:site=A"], []]
